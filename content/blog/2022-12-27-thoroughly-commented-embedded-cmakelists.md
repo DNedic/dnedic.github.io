@@ -239,13 +239,15 @@ add_custom_command(TARGET ${EXECUTABLE}
 )
 ```
 This creates a custom command that prints out the firmware binary size information.
-`text` is the code, `data` stores variables that have a non-zero initial value and have to be stored in flash,
-`bss` stores zero initial values that only take up ram. `dec` and `hex` are just the cumulative size in decimal and hexadecimal notation respectively.
 Example:
 
-|text|data| bss| dec| hex|filename                              |
-|----|----|----|----|----|--------------------------------------|
-|3432|  20|1572|5024|13a0|most_commented_embedded_cmakelists.elf|
+```
+text   data    bss    dec    hex filename
+3432     20   1572   5024   13a0 most_commented_embedded_cmakelists.elf
+```
+
+`text` is the code, `data` stores variables that have a non-zero initial value and have to be stored in flash,
+`bss` stores zero initial values that only take up ram. `dec` and `hex` are just the cumulative size in decimal and hexadecimal notation respectively.
 
 [Here](https://mcuoneclipse.com/2013/04/14/text-data-and-bss-code-and-data-size-explained/) is a good resource for understanding these sections and to learn more about output options.
 
