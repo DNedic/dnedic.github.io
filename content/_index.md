@@ -1,5 +1,4 @@
 +++
-title = "Djordje's Blog"
 +++
 
 ## Djordje Nedic
