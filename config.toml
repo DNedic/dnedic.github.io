@@ -1,0 +1,29 @@
+# The URL the site will be built for
+base_url = "https://dnedic.github.io"
+
+theme = "simple-dev-blog"
+
+taxonomies = [ { name = "tags" } ]
+
+# Whether to automatically compile all Sass files in the sass directory
+compile_sass = true
+
+# Whether to build a search index to be used later on by a JavaScript library
+build_search_index = false
+
+[markdown]
+# Whether to do syntax highlighting
+# Theme can be customized by setting the `highlight_theme` variable to a theme supported by Zola
+highlight_code = true
+highlight_theme = "one-dark"
+
+[extra]
+# Put all your custom variables here
+accent = "#007ea7"
+accent_light = "#007ea7"
+profile_small = "content/profile_small.jpeg"
+profile_large = "content/profile_large.JPG"
+nav = [
+  { name = "Blog", path = "/blog/" }
+]
+footer_about = "Find me on [LinkedIn](https://www.linkedin.com/in/djordje-nedic/) or [GitHub](https://github.com/DNedic)"
