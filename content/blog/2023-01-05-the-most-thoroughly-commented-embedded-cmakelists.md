@@ -92,7 +92,7 @@ As most microcontrollers are rather limited in terms of flash size and cpu speed
 optimization level of `-O0` is not suitable. `-Og` is an optimization level created for the best tradeoff
 between size, speed and debugging viability.
 
-Other configurations use their default compiler optimization levels, `-O2` for the Release configuration and `-Os` for the MinSizeRel configuration, so nothing else is added.
+Other configurations use their default compiler optimization levels, `-O2` for the `Release` configuration and `-Os` for the `MinSizeRel` configuration, so nothing else is added.
 
 ```cmake
 set(DEPENDENCY_INFO_OPTIONS
@@ -154,7 +154,7 @@ This tells the linker to include the nano variant of the [newlib](https://source
     -T${CMAKE_SOURCE_DIR}/STM32F103C8Tx_FLASH.ld
 ```
 Here the linkerscript of the chip is passed. The linkerscript tells the linker where to store the objects in memory.
-I recommend reading the already mentioned [most thoroughly commented linker script](https://blog.thea.codes/the-most-thoroughly-commented-linker-script/).
+I recommend reading the already mentioned [most thoroughly commented linker script](https://blog.thea.codes/the-most-thoroughly-commented-linker-script/) blogpost.
 
 ```cmake
     -Wl,-Map=${PROJECT_NAME}.map,--cref
