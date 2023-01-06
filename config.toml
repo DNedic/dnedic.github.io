@@ -21,8 +21,8 @@ highlight_theme = "one-dark"
 # Put all your custom variables here
 accent = "#007ea7"
 accent_light = "#007ea7"
-profile_small = "content/profile_small.jpeg"
-profile_large = "content/profile_large.JPG"
+profile_small = "content/profile_small.webp"
+profile_large = "content/profile_large.webp"
 nav = [
   { name = "Blog", path = "/blog/" }
 ]
