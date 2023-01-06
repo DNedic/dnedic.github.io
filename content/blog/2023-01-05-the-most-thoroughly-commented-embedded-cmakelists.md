@@ -235,7 +235,7 @@ Here we link the libraries to the executable. Same principle applies to the reas
 ```cmake
 add_custom_command(TARGET ${EXECUTABLE}
     POST_BUILD
-    COMMAND arm-none-eabi-size ${EXECUTABLE}
+    COMMAND ${CMAKE_SIZE_UTIL} ${EXECUTABLE}
 )
 ```
 This creates a custom command that prints out the firmware binary size information.
@@ -254,8 +254,8 @@ text   data    bss    dec    hex filename
 ```cmake
 add_custom_command(TARGET ${EXECUTABLE}
     POST_BUILD
-    COMMAND arm-none-eabi-objcopy -O ihex ${EXECUTABLE} ${PROJECT_NAME}.hex
-    COMMAND arm-none-eabi-objcopy -O binary ${EXECUTABLE} ${PROJECT_NAME}.bin
+    COMMAND ${CMAKE_OBJCOPY} -O ihex ${EXECUTABLE} ${PROJECT_NAME}.hex
+    COMMAND ${CMAKE_OBJCOPY} -O binary ${EXECUTABLE} ${PROJECT_NAME}.bin
 )
 ```
 This creates a custom command to generate binary and hex files.
