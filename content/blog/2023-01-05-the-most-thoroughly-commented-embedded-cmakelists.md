@@ -102,7 +102,7 @@ Here the preprocessor flags custom variable containing dependency info options i
     -MMD
 ```
 This line tells the preprocessor to generate dependency files for Make-compatible build systems instead of full preprocessor output, while removing mentions to system header files.
-> Note: If we need the preprocessor output ourselves we can pass the `-E` argument to the compiler instead.
+> **Note:** If we need the preprocessor output ourselves we can pass the `-E` argument to the compiler instead.
 ```cmake
     -MP
 ```
@@ -134,7 +134,7 @@ add_compile_options(
 )
 ```
 Finally, all the created variables are used to set the global compiler options.
-> Note: It is possible to override these per-target by using `target_compile_options()`, for instance to apply a higher optimization level to third party libraries we are not going to be debugging.
+> **Note:** It is possible to override these per-target by using `target_compile_options()`, for instance to apply a higher optimization level to third party libraries we are not going to be debugging.
 
 ## Linker options
 ```cmake
