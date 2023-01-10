@@ -61,18 +61,6 @@ This sets a custom [microcontroller specific compiler flags](https://gcc.gnu.org
 First, the cpu variant is set and then the compiler is told to emit [thumb instructions](https://developer.arm.com/documentation/ddi0337/e/Programmer-s-Model/Instruction-set).
 
 ```cmake
-set(WARNING_OPTIONS
-    -Wall
-    -Wextra
-    -Wshadow
-    -Wconversion
-    -Wdouble-promotion
-)
-```
-This sets a custom variable containing [additional warning compiler flags](https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html).
-All of these provide much more safety if not ignored.
-
-```cmake
 set(EXTRA_OPTIONS
     -fdata-sections
     -ffunction-sections
@@ -129,7 +117,6 @@ add_compile_options(
     ${EXTRA_OPTIONS}
     ${DEBUG_INFO_OPTIONS}
     ${DEPENDENCY_INFO_OPTIONS}
-    ${WARNING_OPTIONS}
     ${OPTIMIZATION_OPTIONS}
 )
 ```
@@ -222,6 +209,19 @@ PRIVATE
 ```
 Add the include directories for the executable.
 Since we don't need the includes to propagate up as our executable is the final product of the build process, we are including as `PRIVATE`.
+
+```cmake
+target_compile_options(${EXECUTABLE}
+PRIVATE
+    -Wall
+    -Wextra
+    -Wshadow
+    -Wconversion
+    -Wdouble-promotion
+)
+```
+This adds [additional warning compiler flags](https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html) to our executable target, enabling them for our sources, but not third party libraries.
+All of these provide much more safety if not ignored.
 
 ```cmake
 target_link_libraries(${EXECUTABLE}
