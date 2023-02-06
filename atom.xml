@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+	<title>Djordje Nedic</title>
+	<link href="https://dnedic.github.io/atom.xml" rel="self" type="application/atom+xml"/>
+  <link href="https://dnedic.github.io"/>
+	<generator uri="https://www.getzola.org/">Zola</generator>
+	<updated>2023-01-05T00:00:00+00:00</updated>
+	<id>https://dnedic.github.io/atom.xml</id>
+	<entry xml:lang="en">
+		<title>The most thoroughly commented embedded CMakeLists file</title>
+		<published>2023-01-05T00:00:00+00:00</published>
+		<updated>2023-01-05T00:00:00+00:00</updated>
+		<link rel="alternate" href="https://dnedic.github.io/blog/the-most-thoroughly-commented-embedded-cmakelists/" type="text/html"/>
+		<id>https://dnedic.github.io/blog/the-most-thoroughly-commented-embedded-cmakelists/</id>
+		<content type="html">&lt;p&gt;Many embedded software engineers have had to deal with build systems that are either non cross-platform or a part of the IDE they are using, don&#x27;t offer easy composability or per-library configuration, provide no testing support or ways to generate or package files without using a third party scripting language.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;a href=&quot;https:&#x2F;&#x2F;cmake.org&#x2F;&quot;&gt;CMake&lt;&#x2F;a&gt; is a build system that offers solutions to many of those problems and is already well adopted in the world of traditional software development.
+Inspired by &lt;a href=&quot;https:&#x2F;&#x2F;blog.thea.codes&#x2F;the-most-thoroughly-commented-linker-script&#x2F;&quot;&gt;The most thoroughly commented linker script&lt;&#x2F;a&gt; blogpost and having used CMake in two different professional environments, I have decided to write an overview of a minimal CMakeLists file for an embedded project.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;DNedic&#x2F;most_commented_embedded_cmakelists&#x2F;blob&#x2F;main&#x2F;CMakeLists.txt&quot;&gt;Here&lt;&#x2F;a&gt; is the CMakeLists file we are going to be taking a look at. It is a part of a &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;DNedic&#x2F;most_commented_embedded_cmakelists&quot;&gt;CMake STM32 project&lt;&#x2F;a&gt; i created as a demonstration and uses an STM32F103 MCU.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;the-minimum-version&quot;&gt;The minimum version&lt;&#x2F;h2&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;cmake_minimum_required&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;VERSION &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;3.21)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This call is required at the top of every CMakeLists file, it sets the minimum CMake version our project can be built with, and this decides the features that can be used.
+Generally it is advisable to set it as low as possible until features from the newer versions are required.
+Another good approach is to check &lt;a href=&quot;https:&#x2F;&#x2F;repology.org&#x2F;project&#x2F;cmake&#x2F;versions&quot;&gt;repology&lt;&#x2F;a&gt; for the CMake versions shipped in most used Linux distributions.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;project-declaration&quot;&gt;Project declaration&lt;&#x2F;h2&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;project&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(most_commented_embedded_cmakelists
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;VERSION &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;1.0.0
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    DESCRIPTION &lt;&#x2F;span&gt;&lt;span style=&quot;color:#9acc76;&quot;&gt;&amp;quot;This is a demo project&amp;quot;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;The &lt;a href=&quot;https:&#x2F;&#x2F;cmake.org&#x2F;cmake&#x2F;help&#x2F;latest&#x2F;command&#x2F;project.html&quot;&gt;project()&lt;&#x2F;a&gt; call sets up the project name and optionally version, description, homepage and more and stores them in variables that can be used later.
+For instance, the project name is stored in &lt;code&gt;PROJECT_NAME&lt;&#x2F;code&gt;, description in &lt;code&gt;PROJECT_DESCRIPTION&lt;&#x2F;code&gt; and so on.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;language-settings&quot;&gt;Language settings&lt;&#x2F;h2&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;enable_language&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(C ASM)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This sets the languages the project is going to be using, if C++ support is desired add &lt;code&gt;CXX&lt;&#x2F;code&gt; to the list.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;set&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;CMAKE_C_STANDARD &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;11)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;set&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;CMAKE_C_STANDARD_REQUIRED &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;ON)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This sets the language standard globally and whether the standard is a requirement.
+This may not be required, however due to the non-backward compatible nature of C and C++ it is preferred.&lt;&#x2F;p&gt;
+&lt;p&gt;C11 is a good first choice for projects as it provides useful additions like &lt;a href=&quot;https:&#x2F;&#x2F;en.cppreference.com&#x2F;w&#x2F;c&#x2F;atomic&quot;&gt;atomics&lt;&#x2F;a&gt;, however it does away with optional features like &lt;a href=&quot;https:&#x2F;&#x2F;en.wikipedia.org&#x2F;wiki&#x2F;Variable-length_array&quot;&gt;VLAs&lt;&#x2F;a&gt;, so C99 or lower might be preferable when working with legacy projects.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;set&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;CMAKE_C_EXTENSIONS &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;OFF)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This controls the inclusion of the &lt;a href=&quot;https:&#x2F;&#x2F;gcc.gnu.org&#x2F;onlinedocs&#x2F;gcc&#x2F;C-Extensions.html&quot;&gt;GNU extensions&lt;&#x2F;a&gt; to the C language globally, &lt;code&gt;OFF&lt;&#x2F;code&gt; is preferred for more standard and portable C however GNU extensions can provide useful things on top of the base standard.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;compiler-options&quot;&gt;Compiler options&lt;&#x2F;h2&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;set&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;MCU_OPTIONS
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -mcpu=cortex-m3
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -mthumb
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This sets a custom &lt;a href=&quot;https:&#x2F;&#x2F;gcc.gnu.org&#x2F;onlinedocs&#x2F;gcc&#x2F;ARM-Options.html&quot;&gt;microcontroller specific compiler flags&lt;&#x2F;a&gt; variable.
+First, the cpu variant is set and then the compiler is told to emit &lt;a href=&quot;https:&#x2F;&#x2F;developer.arm.com&#x2F;documentation&#x2F;ddi0337&#x2F;e&#x2F;Programmer-s-Model&#x2F;Instruction-set&quot;&gt;thumb instructions&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;set&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;EXTRA_OPTIONS
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -fdata-sections
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -ffunction-sections
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This sets up a variable containing extra functionality compiler flags.
+The flags added here ensure that all objects are placed in separate linker sections. We will see later why that is important.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;set&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;OPTIMIZATION_OPTIONS
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    $&amp;lt;$&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;CONFIG&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;:&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;Debug&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;&amp;gt;:-&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;Og&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;&amp;gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Here the compiler optimization flags custom variable is created. The weird looking expression conditionally sets compiler optimization level to &lt;code&gt;-Og&lt;&#x2F;code&gt; when building with the Debug &lt;a href=&quot;https:&#x2F;&#x2F;cmake.org&#x2F;cmake&#x2F;help&#x2F;latest&#x2F;manual&#x2F;cmake-buildsystem.7.html#build-configurations&quot;&gt;configuration&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;As most microcontrollers are rather limited in terms of flash size and cpu speed, the default
+optimization level of &lt;code&gt;-O0&lt;&#x2F;code&gt; is not suitable. &lt;code&gt;-Og&lt;&#x2F;code&gt; is an optimization level created for the best tradeoff
+between size, speed and debugging viability.&lt;&#x2F;p&gt;
+&lt;p&gt;Other configurations use their default compiler optimization levels, &lt;code&gt;-O2&lt;&#x2F;code&gt; for the &lt;code&gt;Release&lt;&#x2F;code&gt; configuration and &lt;code&gt;-Os&lt;&#x2F;code&gt; for the &lt;code&gt;MinSizeRel&lt;&#x2F;code&gt; configuration, so nothing else is added.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;set&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;DEPENDENCY_INFO_OPTIONS
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Here the preprocessor flags custom variable containing dependency info options is created.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;MMD
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This line tells the preprocessor to generate dependency files for Make-compatible build systems instead of full preprocessor output, while removing mentions to system header files.&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;Note:&lt;&#x2F;strong&gt; If we need the preprocessor output ourselves we can pass the &lt;code&gt;-E&lt;&#x2F;code&gt; argument to the compiler instead.&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;MP
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This option instructs the preprocessor to add a phony target for each dependency other than the main file to work around errors the build system gives if you remove header files without updating it.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;MF&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; &amp;quot;$(@:%.o=%.d)&amp;quot;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;The last line specifies that we want the dependency files to be generated with the same name as the corresponding object file.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;set&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;DEBUG_INFO_OPTIONS
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -g3
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -gdwarf-2
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This creates a custom variable containing &lt;a href=&quot;https:&#x2F;&#x2F;gcc.gnu.org&#x2F;onlinedocs&#x2F;gcc&#x2F;Debugging-Options.html&quot;&gt;compiler flags for generating debug information&lt;&#x2F;a&gt;.
+The first line tells the compiler to produce the debugging output and the level of detail while the second line configures the debug output format and version.
+We are using dwarf version 2 for best debugger compatibility.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;add_compile_options&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    ${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;MCU_OPTIONS&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    ${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;EXTRA_OPTIONS&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    ${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;DEBUG_INFO_OPTIONS&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    ${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;DEPENDENCY_INFO_OPTIONS&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    ${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;OPTIMIZATION_OPTIONS&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Finally, all the created variables are used to set the global compiler options.&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;Note:&lt;&#x2F;strong&gt; It is possible to override these per-target by using &lt;code&gt;target_compile_options()&lt;&#x2F;code&gt;, for instance to apply a higher optimization level to third party libraries we are not going to be debugging.&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;h2 id=&quot;linker-options&quot;&gt;Linker options&lt;&#x2F;h2&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;add_link_options&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Here we are adding global linker options.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    ${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;MCU_OPTIONS&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;First, it is required to pass the previously created microcontroller specific flags variable created earlier.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;specs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;=nano.specs
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This tells the linker to include the nano variant of the &lt;a href=&quot;https:&#x2F;&#x2F;sourceware.org&#x2F;newlib&#x2F;&quot;&gt;newlib&lt;&#x2F;a&gt; standard library which is optimized for minimal binary size and RAM use. The regular newlib variant is used simply by not passing this.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;T&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;CMAKE_SOURCE_DIR&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}&#x2F;STM32F103C8Tx_FLASH.ld
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Here the linkerscript of the chip is passed. The linkerscript tells the linker where to store the objects in memory.
+I recommend reading the already mentioned &lt;a href=&quot;https:&#x2F;&#x2F;blog.thea.codes&#x2F;the-most-thoroughly-commented-linker-script&#x2F;&quot;&gt;most thoroughly commented linker script&lt;&#x2F;a&gt; blogpost.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;Wl&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;,-Map=${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;PROJECT_NAME&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}.map,--cref
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This directive instructs the linker to generate a mapfile. Mapfiles contain information about the final layout of the firmware binary and are an invaluable resource for development.
+I recommend reading &lt;a href=&quot;https:&#x2F;&#x2F;interrupt.memfault.com&#x2F;blog&#x2F;get-the-most-out-of-the-linker-map-file&quot;&gt;this excellent Interrupt blogpost&lt;&#x2F;a&gt; for a quick introduction.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;Wl&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;,--gc-sections
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This is the linker flag for removing the unused sections from the final binary, it works in conjunction with the previously mentioned &lt;code&gt;-fdata-sections&lt;&#x2F;code&gt; and &lt;code&gt;-ffunction-sections&lt;&#x2F;code&gt; compiler flags to remove all unused objects from the final binary.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;linking-the-standard-library&quot;&gt;Linking the standard library&lt;&#x2F;h2&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;link_libraries&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#9acc76;&quot;&gt;&amp;quot;-lc -lm -lnosys&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This call tells the linker to link the standard library components to all the libraries and executables
+added after the call.&lt;&#x2F;p&gt;
+&lt;p&gt;The order of the standard library calls is important as the linker evaluates arguments one by one:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;-lc is the libc containing most standard library features&lt;&#x2F;li&gt;
+&lt;li&gt;-lm is the libm containing math functionality&lt;&#x2F;li&gt;
+&lt;li&gt;-lnosys provides stubs for the syscalls, essentially placeholders for what would be operating system calls&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h2 id=&quot;adding-library-subprojects&quot;&gt;Adding library subprojects&lt;&#x2F;h2&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;add_subdirectory&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(Drivers)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;When a subdirectory is added, the CMakeLists file contained in that subdirectory is evaluated, this is usually chained for composability.
+In this case the &lt;code&gt;Drivers&lt;&#x2F;code&gt; CMakeLists file creates a static library called &lt;code&gt;Drivers&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;target_include_directories&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(Drivers
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;PRIVATE
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    Core&#x2F;Inc
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;We need to include the &lt;code&gt;Core&#x2F;Inc&lt;&#x2F;code&gt; for the &lt;code&gt;Drivers&lt;&#x2F;code&gt; library, as it depends on the definitions inside the &lt;code&gt;Core&lt;&#x2F;code&gt; headers.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;the-executable&quot;&gt;The executable&lt;&#x2F;h2&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;set&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;EXECUTABLE &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;PROJECT_NAME&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}.elf)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This creates a variable containing the executable name by appending the &lt;a href=&quot;https:&#x2F;&#x2F;en.wikipedia.org&#x2F;wiki&#x2F;Executable_and_Linkable_Format&quot;&gt;ELF&lt;&#x2F;a&gt; extension to the project name.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;add_executable&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;EXECUTABLE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    Core&#x2F;Src&#x2F;main.c
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    Core&#x2F;Src&#x2F;stm32f1xx_hal_msp.c
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    Core&#x2F;Src&#x2F;stm32f1xx_it.c
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    Core&#x2F;Src&#x2F;system_stm32f1xx.c
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    startup_stm32f103xb.s
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Here we are creating the executable target and adding top-level sources to it.
+An executable is the final product of the build process, in this case our firmware.
+Note the startup file gets added along with the C sources.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;target_include_directories&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;EXECUTABLE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;PRIVATE
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    Core&#x2F;Inc
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Add the include directories for the executable.
+Since we don&#x27;t need the includes to propagate up as our executable is the final product of the build process, we are including as &lt;code&gt;PRIVATE&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;target_compile_options&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;EXECUTABLE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;PRIVATE
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -Wall
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -Wextra
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -Wshadow
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -Wconversion
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -Wdouble-promotion
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This adds &lt;a href=&quot;https:&#x2F;&#x2F;gcc.gnu.org&#x2F;onlinedocs&#x2F;gcc&#x2F;Warning-Options.html&quot;&gt;additional warning compiler flags&lt;&#x2F;a&gt; to our executable target, enabling them for our sources, but not third party libraries.
+All of these provide much more safety if not ignored.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;target_link_libraries&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;EXECUTABLE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;PRIVATE
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    Drivers
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Here we link the libraries to the executable. Same principle applies to the reasoning behind &lt;code&gt;PRIVATE&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;post-build-commands&quot;&gt;Post-build commands&lt;&#x2F;h2&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;add_custom_command&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;TARGET &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;EXECUTABLE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;POST_BUILD
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;COMMAND &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;CMAKE_SIZE_UTIL&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;} ${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;EXECUTABLE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This creates a custom command that prints out the firmware binary size information.
+Example:&lt;&#x2F;p&gt;
+&lt;pre style=&quot;background-color:#2b303b;color:#6c7079;&quot;&gt;&lt;code&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;text   data    bss    dec    hex filename
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;3432     20   1572   5024   13a0 most_commented_embedded_cmakelists.elf
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;&lt;code&gt;text&lt;&#x2F;code&gt; is the code, &lt;code&gt;data&lt;&#x2F;code&gt; stores variables that have a non-zero initial value and have to be stored in flash,
+&lt;code&gt;bss&lt;&#x2F;code&gt; stores zero initial values that only take up ram. &lt;code&gt;dec&lt;&#x2F;code&gt; and &lt;code&gt;hex&lt;&#x2F;code&gt; are just the cumulative size in decimal and hexadecimal notation respectively.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;a href=&quot;https:&#x2F;&#x2F;mcuoneclipse.com&#x2F;2013&#x2F;04&#x2F;14&#x2F;text-data-and-bss-code-and-data-size-explained&#x2F;&quot;&gt;Here&lt;&#x2F;a&gt; is a good resource for understanding these sections and to learn more about output options.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;add_custom_command&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;TARGET &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;EXECUTABLE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;POST_BUILD
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;COMMAND &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;CMAKE_OBJCOPY&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;} -O ihex ${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;EXECUTABLE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;} ${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;PROJECT_NAME&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}.hex
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;COMMAND &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;CMAKE_OBJCOPY&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;} -O binary ${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;EXECUTABLE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;} ${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;PROJECT_NAME&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}.bin
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This creates a custom command to generate binary and hex files.
+These can be used depending on which method of loading the firmware to the MCU is used.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;closing&quot;&gt;Closing&lt;&#x2F;h2&gt;
+&lt;p&gt;Hopefully this gives you an overview of how a minimal CMakeLists file for an embedded project looks like and peaked your curiosity if you&#x27;ve never used CMake for embedded projects.&lt;&#x2F;p&gt;
+&lt;p&gt;It is worth keeping in mind that this article is not a complete guide to CMake and doesn&#x27;t go into toolchain files, library CMakeLists and other things required for a complete CMake-based embedded project, however the &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;DNedic&#x2F;most_commented_embedded_cmakelists&quot;&gt;project on GitHub&lt;&#x2F;a&gt; used for demonstration contains all of those and can be used as a template.&lt;&#x2F;p&gt;
+</content>
+	</entry>
+</feed>
