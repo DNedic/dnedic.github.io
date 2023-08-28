@@ -81,14 +81,11 @@ $ docker run -v $(pwd):/usr/project -it most_commented_embedded_cmakelists
 
 Where the `-v` argument maps our current working directory to the containers `/usr/project` directory and `-it` runs the container in the interactive mode.
 
-In order to be able to debug our project, we have to add `openocd` and any debugger drivers to the list of packages, copy over the `udev` rules:
+In order to be able to debug our project, we have to add `openocd` and any debugger drivers to the list of packages:
 
 ```Dockerfile
 # Get the required packages
 RUN apt-get -y install openocd libusb-1.0-0
-
-# Copy over udev rules
-RUN cp /usr/local/share/openocd/contrib/99-openocd.rules /etc/udev/rules.d/99-openocd.rules
 ```
 
 then pass all usb devices through to the container every time we run it:
