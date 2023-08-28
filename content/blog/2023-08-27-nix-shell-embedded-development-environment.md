@@ -15,7 +15,7 @@ In this post we will leverage the [Nix](https://nixos.org/) package manager to c
 [TOC]
 
 ## Our example project
-In [the previous blogpost](/blog/the-most-thoroughly-commented-embedded-cmakelists/), we explored setting up a simple CMake project for an STM32 microcontroller using open source tooling.
+In [the previous blogpost](/blog/the-most-thoroughly-commented-embedded-cmakelists/), we explored setting up a [simple CMake project](https://github.com/DNedic/most_commented_embedded_cmakelists) for an STM32 microcontroller using open source tooling.
 To build the project, we need a few tools:
 * The [ARM Embedded GCC toolchain](https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads) to compile and link the sources as well as bundle the standard library
 * `CMake` to generate our build system
