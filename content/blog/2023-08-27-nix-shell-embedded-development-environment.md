@@ -84,7 +84,6 @@ Where the `-v` argument maps our current working directory to the containers `/u
 In order to be able to debug our project, we have to add `openocd` and any debugger drivers to the list of packages:
 
 ```Dockerfile
-# Get the required packages
 RUN apt-get -y install openocd libusb-1.0-0
 ```
 
