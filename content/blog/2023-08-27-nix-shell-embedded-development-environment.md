@@ -262,7 +262,7 @@ Finally, there are quite a few projects built on top of `nix-shell` that offer u
 
 ## Closing
 
-In this blogpost we outlined some of the biggest challenges encountered by developers when switching to open tooling development environments, shown state of the art solutions and where they falter and then introduced `nix-shell` as a viable alternative.
+In this blogpost we covered some of the biggest challenges encountered by developers when switching to open tooling development environments, explored state of the art solutions and where they falter and then introduced `nix-shell` as a viable alternative.
 
 At this point you should be ready to give `nix-shell` a shot the next time you're required to manage an embedded development environment and save yourself and your team from the pains of manual tool management.
 
