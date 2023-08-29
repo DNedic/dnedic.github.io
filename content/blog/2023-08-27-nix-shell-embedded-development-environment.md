@@ -162,7 +162,6 @@ This can be done in one of the following ways:
 let pkgs = import (builtins.fetchGit {
   url = "https://github.com/NixOS/nixpkgs/archive/976fa3369d722e76f37c77493d99829540d43845.tar.gz";
 }) {};
-# --snip--
 ```
 * By using `builtins.fetchGit` and specifying a git revision
 ```nix
@@ -171,7 +170,6 @@ let pkgs = import (builtins.fetchGit {
   ref = "refs/heads/nixos-unstable";
   rev = "976fa3369d722e76f37c77493d99829540d43845";
 }) {};
-# --snip--
 ```
 
 While Nix itself does not provide an easy way to obtain these arguments based on the package versions we need the [nix-versions](https://lazamar.co.uk/nix-versions/) website can be used to obtain them and even generate code blocks shown above.
