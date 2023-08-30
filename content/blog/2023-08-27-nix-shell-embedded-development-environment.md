@@ -159,7 +159,7 @@ Usually, this is done by pinning `nixpkgs` to a specific point in time.
 This can be done in one of the following ways:
 * By using `builtins.fetchTarball` and specifying the `nixpkgs` tarball
 ```nix
-let pkgs = import (builtins.fetchGit {
+let pkgs = import (builtins.fetchTarball {
   url = "https://github.com/NixOS/nixpkgs/archive/976fa3369d722e76f37c77493d99829540d43845.tar.gz";
 }) {};
 ```
@@ -192,10 +192,10 @@ If however the nixpkgs revision for one package does not provide the desired ver
 
 ```nix
 let
-  pkgs = import (builtins.fetchGit {
+  pkgs = import (builtins.fetchTarball {
     url = "https://github.com/NixOS/nixpkgs/archive/976fa3369d722e76f37c77493d99829540d43845.tar.gz";
   }) {};
-  pkgs_arm_gcc = import (builtins.fetchGit {
+  pkgs_arm_gcc = import (builtins.fetchTarball {
     url = "https://github.com/NixOS/nixpkgs/archive/b0f0b5c6c021ebafbd322899aa9a54b87d75a313.tar.gz";
   }) {};
 
