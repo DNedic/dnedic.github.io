@@ -63,7 +63,12 @@ FROM ubuntu:23.04
 RUN apt-get -qq update
 
 # Get the required packages
-RUN apt-get -y install cmake make git gcc-arm-none-eabi binutils-arm-none-eabi libnewlib-arm-none-eabi
+RUN apt-get -y install cmake \
+                       make \
+                       git \
+                       gcc-arm-none-eabi \
+                       binutils-arm-none-eabi \
+                       libnewlib-arm-none-eabi
 
 # Specify the working directory inside the container
 WORKDIR /usr/project
@@ -232,7 +237,9 @@ let
     rev = "4cc9ec3f8e992ed15924672192a2ce5fb0223121";
   };
 
-  pkgs = import <nixpkgs> { overlays = [ (import "${nixpkgs-esp-dev}/overlay.nix") ]; };
+  pkgs = import <nixpkgs> {
+    overlays = [ (import "${nixpkgs-esp-dev}/overlay.nix") ];
+  };
 
 in pkgs.mkShell {
   packages = [
