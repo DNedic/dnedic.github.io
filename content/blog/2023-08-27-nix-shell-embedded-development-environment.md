@@ -45,7 +45,7 @@ Finally, we can use third party repositories, like [xPack](https://xpack.github.
 ### Universal problems
 On top of issues specific to one of these approaches, the manual approach to tool management requires meticulous checking for compatibility between tools themselves and their various versions working together, which can be a very time consuming process.
 
-To sum everything up, our development enviroments are not **self-contained**, **reproducible** or **managed**.
+To sum everything up, our development environments are not **self-contained**, **reproducible** or **managed**.
 
 ## Docker
 The most popular tool to deal with these issues at the moment is [Docker](https://www.docker.com/).
