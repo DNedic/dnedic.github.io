@@ -23,6 +23,7 @@ highlight_theme = "one-dark"
 # Put all your custom variables here
 accent = "#007ea7"
 accent_light = "#007ea7"
+accent2 = "#E1341E"
 profile_small = "content/profile_small.jpeg"
 profile_large = "content/profile_large.JPG"
 nav = [
