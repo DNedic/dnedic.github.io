@@ -28,4 +28,4 @@ profile_large = "content/profile_large.JPG"
 nav = [
   { name = "Blog", path = "/blog/" }
 ]
-footer_about = "© 2023 - Djordje Nedic | Find me on [LinkedIn](https://www.linkedin.com/in/djordje-nedic/) or [GitHub](https://github.com/DNedic)"
+footer_about = "© 2026 - Djordje Nedic | Find me on [LinkedIn](https://www.linkedin.com/in/djordje-nedic/) or [GitHub](https://github.com/DNedic)"
