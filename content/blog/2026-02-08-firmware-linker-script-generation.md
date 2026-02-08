@@ -62,7 +62,7 @@ The output will still be a normal `.ld` file - the linker should never see the t
 ## A minimal example project
 Let’s look at a concrete example to see how all this works in practice.
 We’ll start from a [simple CMake firmware project](https://github.com/DNedic/most_commented_embedded_cmakelists) for an STM32 microcontroller.
-For the impatient, the end result lives on the [linker_script_generation branch](https://github.com/DNedic/most_commented_embedded_cmakelists).
+For the impatient, the end result lives on the [linker_script_generation branch](https://github.com/DNedic/most_commented_embedded_cmakelists/tree/linker_script_generation).
 
 For demonstration purposes, we will set aside the STM32CubeMX-provided linker script and use the simplest linker script that can still build and run the project correctly:
 ```ld
