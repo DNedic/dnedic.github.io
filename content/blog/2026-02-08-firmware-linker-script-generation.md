@@ -51,8 +51,8 @@ As an example, the memory region part of the linker script template could look l
 
 ```ld
 MEMORY {
-  FLASH (rx) : ORIGIN = ${flash_start}, LENGTH = ${flash_size}
-  RAM   (rwx): ORIGIN = ${ram_start},   LENGTH = ${ram_size}
+    FLASH (rx) : ORIGIN = ${flash_start}, LENGTH = ${flash_size}
+    RAM   (rwx): ORIGIN = ${ram_start},   LENGTH = ${ram_size}
 }
 ```
 
