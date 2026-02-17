@@ -147,7 +147,8 @@ SECTIONS
 
     .stack (NOLOAD) : ALIGN(8)
     {
-        . = . + 0x400; /* A minimum beyond which linking will fail */
+        /* A minimum beyond which linking will fail */
+        . = . + 0x400;
     } > RAM
 
     _estack = ORIGIN(RAM) + LENGTH(RAM);
@@ -265,21 +266,21 @@ cmake -S . -B build -DHEAP_SIZE=0 -DMINIMUM_STACK_SIZE=0x800 -DCMAKE_BUILD_TYPE=
 We can now check the resultant `linker.ld` file in our build folder:
 
 ```ld
-    /* --snip-- */
+/* --snip-- */
 
-    .heap (NOLOAD) : ALIGN(8)
-    {
-        PROVIDE ( end = . );
-        PROVIDE ( _end = . );
-        . = . + 0;
-    } > RAM
+.heap (NOLOAD) : ALIGN(8)
+{
+    PROVIDE ( end = . );
+    PROVIDE ( _end = . );
+    . = . + 0;
+} > RAM
 
-    .stack (NOLOAD) : ALIGN(8)
-    {
-        . = . + 0x800;
-    } > RAM
+.stack (NOLOAD) : ALIGN(8)
+{
+    . = . + 0x800;
+} > RAM
 
-    /* --snip-- */
+/* --snip-- */
 ```
 
 Nice!
