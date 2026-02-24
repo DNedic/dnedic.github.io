@@ -162,10 +162,12 @@ link_libraries("-lc -lm -lnosys")
 This call tells the linker to link the standard library components to all the libraries and executables
 added after the call.
 
-The order of the standard library calls is important as the linker evaluates arguments one by one:
+The order of the standard library calls is important as the linker evaluates arguments one by one, with libraries being able to see symbols from libraries on their right:
 * -lc is the libc containing most standard library features
 * -lm is the libm containing math functionality
 * -lnosys provides stubs for the syscalls, essentially placeholders for what would be operating system calls
+
+> **Note:** CMake also offers the `CMAKE_C_STANDARD_LIBRARIES` variable, whose value is always appended at the end of the final linking command.
 
 ## Adding library subprojects
 ```cmake
