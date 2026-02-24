@@ -160,9 +160,9 @@ This is the linker flag for removing the unused sections from the final binary, 
 link_libraries("-lc -lm -lnosys")
 ```
 This call tells the linker to link the standard library components to all the libraries and executables
-added after the call.
+added after.
 
-The order of the standard library calls is important as the linker evaluates arguments one by one, with libraries being able to see symbols from libraries on their right:
+The order of the standard library calls is important as libraries can only see symbols from libraries on their right:
 * -lc is the libc containing most standard library features
 * -lm is the libm containing math functionality
 * -lnosys provides stubs for the syscalls, essentially placeholders for what would be operating system calls
