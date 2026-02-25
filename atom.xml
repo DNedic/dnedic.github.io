@@ -1,0 +1,914 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+    <title>Djordje Nedic</title>
+    <link rel="self" type="application/atom+xml" href="https://dnedic.github.io/atom.xml"/>
+    <link rel="alternate" type="text/html" href="https://dnedic.github.io"/>
+    <generator uri="https://www.getzola.org/">Zola</generator>
+    <updated>2026-02-08T00:00:00+00:00</updated>
+    <id>https://dnedic.github.io/atom.xml</id>
+    <entry xml:lang="en">
+        <title>Linker Script Generation for Firmware Projects: A Primer</title>
+        <published>2026-02-08T00:00:00+00:00</published>
+        <updated>2026-02-08T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Unknown
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://dnedic.github.io/blog/firmware-linker-script-generation/"/>
+        <id>https://dnedic.github.io/blog/firmware-linker-script-generation/</id>
+        
+        <content type="html" xml:base="https://dnedic.github.io/blog/firmware-linker-script-generation/">&lt;p&gt;If you&#x27;ve worked on firmware for any length of time, chances are you had to modify or write a linker script at some point.
+The core principles are pretty straightforward - define memory regions, place sections inside, respect alignment requirements, define a few symbols and you&#x27;re good to go.&lt;&#x2F;p&gt;
+&lt;p&gt;While this is enough initially, projects can grow unpredictably.
+At some point you might need to add support for multiple chips or different external memories.
+Maybe you end up needing support for different bootloaders?
+Perhaps you might want to load the code into RAM directly for debugging purposes?
+Before you know it, these variations pile up, and suddenly you’re juggling a bunch of nearly identical linker scripts you have to keep in sync, which becomes tedious and error-prone.&lt;&#x2F;p&gt;
+&lt;p&gt;In this article, we&#x27;ll talk about how this happens and dive into a practical example that shows how to keep linker scripts manageable as firmware projects grow.&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;Note:&lt;&#x2F;strong&gt; If it’s been a while since you last tinkered with linker scripts, check out &lt;a href=&quot;https:&#x2F;&#x2F;mcyoung.xyz&#x2F;2021&#x2F;06&#x2F;01&#x2F;linker-script&#x2F;&quot;&gt;this great blogpost&lt;&#x2F;a&gt; and the &lt;a href=&quot;https:&#x2F;&#x2F;sourceware.org&#x2F;binutils&#x2F;docs&#x2F;ld&#x2F;Scripts.html&quot;&gt;official GNU documentation&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;[TOC]&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;why-variants-break-linker-scripts&quot;&gt;Why variants break linker scripts&lt;&#x2F;h2&gt;
+&lt;p&gt;Consider a common scenario:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;You start developing a product using a single chip and a straightforward memory layout. At this stage, your linker script is simple, easy to maintain, and just does what it needs to do.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Later, the original chip becomes hard to source, so you add support for a pin-compatible replacement with more flash and RAM.
+To accommodate both chips, you copy the original linker script, changing only the region sizes.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Next, you decide to add optional bootloader support for devices that can update over the air.
+This introduces another layer of variation: each chip can be built with or without the bootloader, doubling the number of linker scripts.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Finally, a new variant of your product includes an LCD and requires external memory for bitmaps. Now you’re managing eight linker script variants across different configurations!&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;This illustrates why linker scripts can become hard to maintain: each change has to be duplicated across all variations with some falling out of sync over time, making it harder to tell if changes are intentional or not.
+To stay in control, we have to find a way to approach them like other software: &lt;strong&gt;factor out the parts that stay the same, and only configure the parts that change&lt;&#x2F;strong&gt;.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;building-the-mental-framework&quot;&gt;Building the mental framework&lt;&#x2F;h2&gt;
+&lt;p&gt;Let’s take a step back and figure out what really changes and what usually stays the same.&lt;&#x2F;p&gt;
+&lt;p&gt;No matter what we do, the linker needs a valid script at the end of the day.
+That means the overall structure, syntax, and required sections are mostly fixed: we&#x27;ll always have a &lt;code&gt;.text&lt;&#x2F;code&gt; section, a &lt;code&gt;.data&lt;&#x2F;code&gt; section, and certain architecture-specific details like alignment rules or symbol definitions.
+We could use these to create a &lt;strong&gt;template&lt;&#x2F;strong&gt;, which we can then fill out with configurable parts, such as&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;memory properties&lt;&#x2F;li&gt;
+&lt;li&gt;section region mappings&lt;&#x2F;li&gt;
+&lt;li&gt;reservations for optional features&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;As an example, the memory region part of the linker script template could look like this:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;ld&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-ld &quot;&gt;&lt;code class=&quot;language-ld&quot; data-lang=&quot;ld&quot;&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;MEMORY&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; {
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;FLASH&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; (&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;rx&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;) : &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;ORIGIN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = ${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;flash_start&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;LENGTH&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = ${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;flash_size&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;RAM&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;   (&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;rwx&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;): &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;ORIGIN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = ${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;ram_start&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;},   &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;LENGTH&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = ${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;ram_size&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Then, we can store the changing values in the build system itself or in separate YAML&#x2F;JSON files and somehow &lt;strong&gt;generate&lt;&#x2F;strong&gt; the final linker script by combining them with the template.
+The output will still be a normal &lt;code&gt;.ld&lt;&#x2F;code&gt; file - the linker should never see the template or the configuration.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;a-minimal-example-project&quot;&gt;A minimal example project&lt;&#x2F;h2&gt;
+&lt;p&gt;Let’s look at a concrete example to see how all this works in practice.
+We’ll start from a &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;DNedic&#x2F;most_commented_embedded_cmakelists&quot;&gt;simple CMake firmware project&lt;&#x2F;a&gt; for an STM32 microcontroller.
+For the impatient, the end result lives on the &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;DNedic&#x2F;most_commented_embedded_cmakelists&#x2F;tree&#x2F;linker_script_generation&quot;&gt;linker_script_generation branch&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;For demonstration purposes, we will set aside the STM32CubeMX-provided linker script and use the simplest linker script that can still build and run the project correctly:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;ld&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-ld &quot;&gt;&lt;code class=&quot;language-ld&quot; data-lang=&quot;ld&quot;&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;ENTRY&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;Reset_Handler&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;MEMORY
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;{
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;RAM&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; (&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;xrw&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)  : &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;ORIGIN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;0x20000000&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;LENGTH&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;20K
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;FLASH&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; (&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;rx&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;) : &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;ORIGIN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;0x8000000&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;LENGTH&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;64K
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;SECTIONS
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;{
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.isr_vector&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; : &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;ALIGN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;4&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    {
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;KEEP&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(*(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.isr_vector&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;))
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    } &amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;FLASH
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.text&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; : &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;ALIGN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;4&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    {
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        *(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.text&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        *(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.text&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;*)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;KEEP&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; (*(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.init&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;))
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;KEEP&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; (*(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.fini&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;))
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    } &amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;FLASH
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.preinit_array&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; : &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;ALIGN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;4&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    {
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;PROVIDE_HIDDEN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;__preinit_array_start&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;);
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;KEEP&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(*(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.preinit_array&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;*))
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;PROVIDE_HIDDEN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;__preinit_array_end&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;);
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    } &amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;FLASH
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.init_array&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; : &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;ALIGN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;4&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    {
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;PROVIDE_HIDDEN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;__init_array_start&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;);
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;KEEP&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(*(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;SORT&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.init_array.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;*)))
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;KEEP&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(*(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.init_array&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;))
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;PROVIDE_HIDDEN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;__init_array_end&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;);
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    } &amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;FLASH
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.fini_array&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; : &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;ALIGN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;4&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    {
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;PROVIDE_HIDDEN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;__fini_array_start&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;);
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;KEEP&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(*(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;SORT&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.fini_array.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;*)))
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;KEEP&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(*(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.fini_array&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;))
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;PROVIDE_HIDDEN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;__fini_array_end&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;);
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    } &amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;FLASH
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.rodata&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; : &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;ALIGN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;4&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    {
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        *(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.rodata&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        *(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.rodata&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;*)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    } &amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;FLASH
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;_sidata&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;LOADADDR&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.data&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;);
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.data&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; : &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;ALIGN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;4&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    {
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;_sdata&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        *(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.data&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        *(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.data&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;*)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;_edata&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;ALIGN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;4&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;);
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    } &amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;RAM &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;AT&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;&amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;FLASH
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.bss&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; : &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;ALIGN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;4&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    {
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;_sbss&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;__bss_start__&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;_sbss&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        *(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.bss&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        *(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.bss&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;*)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;_ebss&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;ALIGN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;4&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;);
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;__bss_end__&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;_ebss&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    } &amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;RAM
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.heap&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; (&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;NOLOAD&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;) : &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;ALIGN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;8&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    {
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;PROVIDE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; ( &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;end&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; );
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;PROVIDE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; ( &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;_end&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; );
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; + &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;0x200&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    } &amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;RAM
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.stack&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; (&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;NOLOAD&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;) : &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;ALIGN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;8&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    {
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5f697a;&quot;&gt;&#x2F;* A minimum beyond which linking will fail *&#x2F;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; + &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;0x400&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    } &amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;RAM
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;_estack&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;ORIGIN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;RAM&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;) + &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;LENGTH&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;RAM&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;);
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;turning-the-linker-script-into-a-template&quot;&gt;Turning the linker script into a template&lt;&#x2F;h2&gt;
+&lt;p&gt;We could generate linker scripts from templates in a couple of ways.
+For instance, we could use Python and Jinja templates, CMake’s built-in &lt;code&gt;configure_file()&lt;&#x2F;code&gt; to replace placeholders or even go wild and use &lt;code&gt;sed&lt;&#x2F;code&gt;.
+In our case however, we&#x27;ll be using the C preprocessor!
+It lives inside your toolchain, can substitute placeholders and conditionally include or not whole sections of text.&lt;&#x2F;p&gt;
+&lt;p&gt;Our first step is to factor out constants like the stack and heap size so that we can configure them dynamically:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;ld&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-ld &quot;&gt;&lt;code class=&quot;language-ld&quot; data-lang=&quot;ld&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5f697a;&quot;&gt;&#x2F;* --snip-- *&#x2F;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;MEMORY
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;{
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;RAM&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; (&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;xrw&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)  : &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;ORIGIN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;RAM_ORIGIN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;LENGTH&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;RAM_LENGTH
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;FLASH&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; (&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;rx&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;) : &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;ORIGIN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;FLASH_ORIGIN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;LENGTH&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;FLASH_LENGTH
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;SECTIONS
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;{
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5f697a;&quot;&gt;&#x2F;* --snip-- *&#x2F;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.heap&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; (&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;NOLOAD&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;) : &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;ALIGN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;8&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    {
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;PROVIDE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; ( &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;end&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; );
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;PROVIDE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; ( &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;_end&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; );
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; + &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;HEAP_SIZE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    } &amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;RAM
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.stack&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; (&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;NOLOAD&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;) : &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;ALIGN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;8&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    {
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; + &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;MINIMUM_STACK_SIZE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    } &amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;RAM
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;   &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5f697a;&quot;&gt;&#x2F;* --snip-- *&#x2F;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;and rename the linker script to &lt;code&gt;linker.ld.in&lt;&#x2F;code&gt; to make it clear that that it is indeed a template.
+Now we can run the preprocessor to verify that we haven&#x27;t broken anything:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;arm-none-eabi-gcc &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;\
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;    -E -P -x&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; c \
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;    -DRAM_ORIGIN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;=&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;0x20000000 \
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;    -DRAM_LENGTH&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;=&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;20K \
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;    -DFLASH_ORIGIN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;=&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;0x08000000 \
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;    -DFLASH_LENGTH&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;=&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;64K \
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;    -DHEAP_SIZE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;=&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;0x200 \
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;    -DMINIMUM_STACK_SIZE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;=&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;0x400 \
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    linker.ld.in &lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;&amp;gt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; linker.ld
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;Note:&lt;&#x2F;strong&gt; The &lt;code&gt;-E&lt;&#x2F;code&gt; argument invokes the preprocessor only, despite us calling the compiler binary, whereas &lt;code&gt;-x c&lt;&#x2F;code&gt; flag forces the file to be treated as a preprocessor input, and &lt;code&gt;-P&lt;&#x2F;code&gt; suppresses line markers which the preprocessor normally emits.&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;If all goes well, the generated linker script should match the one we started with.&lt;&#x2F;p&gt;
+&lt;p&gt;Now that we know that this works, we can integrate it into our build system.
+First we will move these values into CMake variables.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;CMake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-CMake &quot;&gt;&lt;code class=&quot;language-CMake&quot; data-lang=&quot;CMake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;set&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;RAM_ORIGIN &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;0x20000000)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;set&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;RAM_LENGTH &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;20480)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;set&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;FLASH_ORIGIN &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;0x08000000)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;set&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;FLASH_LENGTH &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;65536)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;set&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;HEAP_SIZE &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;0x200)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;set&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;MINIMUM_STACK_SIZE &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;0x400)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;Note:&lt;&#x2F;strong&gt; We are making them purely numeric in order to be able to do operations on them later.&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;Then, we can use a CMake &lt;a href=&quot;https:&#x2F;&#x2F;cmake.org&#x2F;cmake&#x2F;help&#x2F;latest&#x2F;command&#x2F;add_custom_command.html&quot;&gt;custom command&lt;&#x2F;a&gt;:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;CMake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-CMake &quot;&gt;&lt;code class=&quot;language-CMake&quot; data-lang=&quot;CMake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;add_custom_command&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;OUTPUT &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;CMAKE_BINARY_DIR&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}&#x2F;linker.ld
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;COMMAND &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;CMAKE_C_COMPILER&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;            -E -P -x c
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;            -DRAM_ORIGIN=${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;RAM_ORIGIN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;            -DRAM_LENGTH=${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;RAM_LENGTH&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;            -DFLASH_ORIGIN=${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;FLASH_ORIGIN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;            -DFLASH_LENGTH=${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;FLASH_LENGTH&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;            -DHEAP_SIZE=${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;HEAP_SIZE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;            -DMINIMUM_STACK_SIZE=${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;MINIMUM_STACK_SIZE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;            ${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;CMAKE_SOURCE_DIR&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}&#x2F;linker.ld.in
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;            &amp;gt; ${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;CMAKE_BINARY_DIR&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}&#x2F;linker.ld
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;DEPENDS &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;CMAKE_SOURCE_DIR&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}&#x2F;linker.ld.in
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;COMMENT &lt;&#x2F;span&gt;&lt;span style=&quot;color:#9acc76;&quot;&gt;&amp;quot;Generating linker script&amp;quot;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;Note:&lt;&#x2F;strong&gt; The &lt;code&gt;DEPENDS&lt;&#x2F;code&gt; here makes sure that if the template itself changes, CMake understands that the command needs to be run again.&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;and make it run at build time by making the executable depend on the generated linker script:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;CMake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-CMake &quot;&gt;&lt;code class=&quot;language-CMake&quot; data-lang=&quot;CMake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;add_executable&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;EXECUTABLE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5f697a;&quot;&gt;# --snip--
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    ${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;CMAKE_BINARY_DIR&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}&#x2F;linker.ld
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Lastly, we can change the linking options to use our generated linker script:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;CMake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-CMake &quot;&gt;&lt;code class=&quot;language-CMake&quot; data-lang=&quot;CMake&quot;&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;add_link_options&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5f697a;&quot;&gt;# --snip--
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -T${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;CMAKE_BINARY_DIR&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}&#x2F;linker.ld
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5f697a;&quot;&gt;# --snip--
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;With this, our project builds and we can finally get to the fun part - making the linker script configurable!&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;adding-options&quot;&gt;Adding options&lt;&#x2F;h2&gt;
+&lt;p&gt;Let&#x27;s start simple by making the stack and heap size configurable.
+After deleting the constants we previously added, we need simply define cached values when configuring the project:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;cmake -S&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt; -B&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; build&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt; -DHEAP_SIZE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;=&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;0&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt; -DMINIMUM_STACK_SIZE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;=&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;0x800&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt; -DCMAKE_BUILD_TYPE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;=&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;Debug&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt; -DCMAKE_TOOLCHAIN_FILE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;=&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;arm-none-eabi-gcc.cmake
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;We can now check the resultant &lt;code&gt;linker.ld&lt;&#x2F;code&gt; file in our build folder:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;ld&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-ld &quot;&gt;&lt;code class=&quot;language-ld&quot; data-lang=&quot;ld&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5f697a;&quot;&gt;&#x2F;* --snip-- *&#x2F;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.heap&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; (&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;NOLOAD&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;) : &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;ALIGN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;8&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;{
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;PROVIDE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; ( &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;end&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; );
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;PROVIDE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; ( &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;_end&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; );
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; + &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;0&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;} &amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;RAM
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.stack&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; (&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;NOLOAD&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;) : &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;ALIGN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;8&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;{
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; + &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;0x800&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;} &amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;RAM
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5f697a;&quot;&gt;&#x2F;* --snip-- *&#x2F;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Nice!
+This should be our starting point when debugging any linker generation issues in the future.&lt;&#x2F;p&gt;
+&lt;p&gt;Since it is good practice to introduce default values for user configuration in CMake, we can handle the case when variables aren&#x27;t defined:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;CMake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-CMake &quot;&gt;&lt;code class=&quot;language-CMake&quot; data-lang=&quot;CMake&quot;&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;if &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;NOT &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;DEFINED &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;HEAP_SIZE)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;set&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;HEAP_SIZE &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;0x200)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;endif&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;()
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;if &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;NOT &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;DEFINED &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;MINIMUM_STACK_SIZE)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;set&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;MINIMUM_STACK_SIZE &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;0x400)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;endif&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;()
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Next, let’s tackle optional bootloader support.
+The STM32 &lt;a href=&quot;https:&#x2F;&#x2F;www.st.com&#x2F;resource&#x2F;en&#x2F;reference_manual&#x2F;rm0008-stm32f101xx-stm32f102xx-stm32f103xx-stm32f105xx-and-stm32f107xx-advanced-armbased-32bit-mcus-stmicroelectronics.pdf&quot;&gt;chip we are using&lt;&#x2F;a&gt; has uniform 1KB pages, so the bootloader could be sized any multiple of that.
+Additionally, some of those sectors could also be used for EEPROM emulation or other purposes.
+For the most general solution, we can handle this by introducing a &lt;code&gt;FIRMWARE_FLASH_OFFSET&lt;&#x2F;code&gt; variable:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;CMake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-CMake &quot;&gt;&lt;code class=&quot;language-CMake&quot; data-lang=&quot;CMake&quot;&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;if &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;DEFINED &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;FIRMWARE_FLASH_OFFSET)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;math&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;EXPR &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;FLASH_ORIGIN &lt;&#x2F;span&gt;&lt;span style=&quot;color:#9acc76;&quot;&gt;&amp;quot;${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;FLASH_ORIGIN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#9acc76;&quot;&gt;} + ${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;FIRMWARE_FLASH_OFFSET&lt;&#x2F;span&gt;&lt;span style=&quot;color:#9acc76;&quot;&gt;}&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;math&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;EXPR &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;FLASH_LENGTH &lt;&#x2F;span&gt;&lt;span style=&quot;color:#9acc76;&quot;&gt;&amp;quot;${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;FLASH_LENGTH&lt;&#x2F;span&gt;&lt;span style=&quot;color:#9acc76;&quot;&gt;} - ${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;FIRMWARE_FLASH_OFFSET&lt;&#x2F;span&gt;&lt;span style=&quot;color:#9acc76;&quot;&gt;}&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;endif&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;()
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Another way to verify that our changes worked is to look at the &lt;code&gt;.map&lt;&#x2F;code&gt; file in our build folder:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;ld&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-ld &quot;&gt;&lt;code class=&quot;language-ld&quot; data-lang=&quot;ld&quot;&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.isr_vector     &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;0x08001000      0x10c
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; *(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.isr_vector&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.isr_vector    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;0x08001000      0x10c &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;CMakeFiles&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;&#x2F;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;most_commented_embedded_cmakelists.elf.dir&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;&#x2F;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;startup_stm32f103xb.S.obj
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;                &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;0x08001000                &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;g_pfnVectors
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.text           &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;0x0800110c      0xbd4
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;In this case we used an offset of 4 Kilobytes and that is clearly reflected in the output.&lt;&#x2F;p&gt;
+&lt;p&gt;In some situations, you might want to upload the entire firmware into RAM.
+What you get this way is much faster firmware uploads, don&#x27;t add wear to the flash and in some cases avoid the flash application image format requirements when bringing up new chips.&lt;&#x2F;p&gt;
+&lt;p&gt;To get a RAM-only firmware image, we have to replace the output section to region placement everywhere &lt;code&gt;FLASH&lt;&#x2F;code&gt; is used.
+For example, &lt;code&gt;.data&lt;&#x2F;code&gt; normally resides in RAM but is initialized from FLASH:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;ld&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-ld &quot;&gt;&lt;code class=&quot;language-ld&quot; data-lang=&quot;ld&quot;&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.data&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; : &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;ALIGN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;4&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;{
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;_sdata&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    *(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.data&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    *(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.data&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;*)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;_edata&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;ALIGN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;4&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;);
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;} &amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;RAM &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;AT&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; &amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;FLASH
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;For a RAM-only build, we change it to:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;ld&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-ld &quot;&gt;&lt;code class=&quot;language-ld&quot; data-lang=&quot;ld&quot;&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.data&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; : &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;ALIGN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;4&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;{
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;_sdata&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    *(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.data&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    *(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.data&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;*)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;_edata&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;ALIGN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;4&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;);
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;} &amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;RAM
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Since we&#x27;re using the C preprocessor, we can just &lt;code&gt;#ifdef&lt;&#x2F;code&gt; the mapping:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;ld&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-ld &quot;&gt;&lt;code class=&quot;language-ld&quot; data-lang=&quot;ld&quot;&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.data&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; : &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;ALIGN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;4&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;{
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;_sdata&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    *(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.data&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    *(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;.data&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;*)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;_edata&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;ALIGN&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;4&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;);
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;#&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;ifndef RAM_ONLY_BUILD
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;} &amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;RAM &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;AT&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; &amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;FLASH
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;#&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;else
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;} &amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;RAM
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;#&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;endif
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;To get the define from the user to the linker script preprocessing, first we want to add a configuration option and conditionally define &lt;code&gt;RAM_ONLY_BUILD&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;CMake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-CMake &quot;&gt;&lt;code class=&quot;language-CMake&quot; data-lang=&quot;CMake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;option&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(RAM_ONLY_BUILD &lt;&#x2F;span&gt;&lt;span style=&quot;color:#9acc76;&quot;&gt;&amp;quot;If set, the entire firmware is placed in RAM&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;and then conditionally define it for the linker script preprocessing using the &lt;code&gt;BOOL&lt;&#x2F;code&gt; generator expression:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;CMake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-CMake &quot;&gt;&lt;code class=&quot;language-CMake&quot; data-lang=&quot;CMake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;add_custom_command&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;OUTPUT &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;CMAKE_BINARY_DIR&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}&#x2F;linker.ld
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;COMMAND &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;CMAKE_C_COMPILER&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;            -E -P -x c
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5f697a;&quot;&gt;# -- snip --
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;            $&amp;lt;$&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;BOOL&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;:${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;RAM_ONLY_BUILD&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}&amp;gt;:-&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;DRAM_ONLY_BUILD&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;&amp;gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;            ${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;CMAKE_SOURCE_DIR&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}&#x2F;linker.ld.in
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;            &amp;gt; ${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;CMAKE_BINARY_DIR&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}&#x2F;linker.ld
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;DEPENDS &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;CMAKE_SOURCE_DIR&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}&#x2F;linker.ld.in
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;COMMENT &lt;&#x2F;span&gt;&lt;span style=&quot;color:#9acc76;&quot;&gt;&amp;quot;Generating the linker script&amp;quot;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;Note:&lt;&#x2F;strong&gt; If you haven&#x27;t used &lt;a href=&quot;https:&#x2F;&#x2F;cmake.org&#x2F;cmake&#x2F;help&#x2F;latest&#x2F;manual&#x2F;cmake-generator-expressions.7.html&quot;&gt;generator expressions&lt;&#x2F;a&gt; previously, what this essentially means is: if the boolean representation of the &lt;code&gt;RAM_ONLY_BUILD&lt;&#x2F;code&gt; value is true, add the text after &lt;code&gt;&amp;gt;:&lt;&#x2F;code&gt;, otherwise not.&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;Also, since non-zero initialized variables are normally copied from FLASH to RAM, we should also disable this behavior in the startup script:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;asm&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-asm &quot;&gt;&lt;code class=&quot;language-asm&quot; data-lang=&quot;asm&quot;&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;#ifndef RAM_ONLY_BUILD
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;&#x2F;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;* &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;Copy the data segment initializers from flash to SRAM &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;*&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;&#x2F;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;  ldr r0&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;=_sdata
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;  ldr r1&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;=_edata
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;  ldr r2&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;=_sidata
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;movs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;r3&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;#&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;0
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;  b LoopCopyDataInit
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;CopyDataInit:
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;  ldr r4&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, [&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;r2&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;r3&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;]
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;str &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;r4&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, [&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;r0&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;r3&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;]
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;  adds r3&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;r3&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;#&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;4
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;LoopCopyDataInit:
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;  adds r4&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;r0&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;r3
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;cmp &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;r4&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;r1
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;  bcc CopyDataInit
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;#endif
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;And pass the &lt;code&gt;RAM_ONLY_BUILD&lt;&#x2F;code&gt; definition to the executable in CMake:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;CMake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-CMake &quot;&gt;&lt;code class=&quot;language-CMake&quot; data-lang=&quot;CMake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;target_compile_definitions&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;EXECUTABLE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;} &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;PRIVATE
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    $&amp;lt;$&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;BOOL&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;:${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;RAM_ONLY_BUILD&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}&amp;gt;:&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;RAM_ONLY_BUILD&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;&amp;gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;If you try building with our new option however, you might notice that the copy loop is still there:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;asm&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-asm &quot;&gt;&lt;code class=&quot;language-asm&quot; data-lang=&quot;asm&quot;&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;&#x2F;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;* -- &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;snip &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;-- *&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;&#x2F;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;  ldr r0&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;=_sdata
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;20000238&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;:	480c      	ldr	r0&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, [&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;pc&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;#&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;48&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;]&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5f697a;&quot;&gt;	; (2000026c &amp;lt;LoopFillZerobss+0x12&amp;gt;)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;  ldr r1&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;=_edata
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;2000023a:	490d      	ldr	r1&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, [&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;pc&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;#&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;52&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;]&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5f697a;&quot;&gt;	; (20000270 &amp;lt;LoopFillZerobss+0x16&amp;gt;)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;  ldr r2&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;=_sidata
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;2000023c:	4a0d      	ldr	r2&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, [&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;pc&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;#&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;52&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;]&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5f697a;&quot;&gt;	; (20000274 &amp;lt;LoopFillZerobss+0x1a&amp;gt;)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;movs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;r3&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;#&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;0
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;2000023e:	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;2300      	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;movs	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;r3&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;#&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;0
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;  b LoopCopyDataInit
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;20000240&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;:	e002      	b.n	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;20000248 &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;&amp;lt;LoopCopyDataInit&amp;gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;20000242 &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;&amp;lt;CopyDataInit&amp;gt;:
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;CopyDataInit:
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;  ldr r4&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, [&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;r2&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;r3&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;]
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;20000242&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;:	58d4      	ldr	r4&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, [&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;r2&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;r3&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;]
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;&#x2F;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;* -- &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;snip &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;-- *&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;&#x2F;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This is because by default, GCC does not preprocess assembly files with the &lt;strong&gt;lowercase&lt;&#x2F;strong&gt; .s extension, which the STM32CubeMX provided startup file uses.
+This goes away when we rename the file to use the &lt;code&gt;.S&lt;&#x2F;code&gt; extension, intended for preprocessing.
+When we do this, we can see that the loop is gone:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;asm&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-asm &quot;&gt;&lt;code class=&quot;language-asm&quot; data-lang=&quot;asm&quot;&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;&#x2F;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;* -- &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;snip &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;-- *&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;&#x2F;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;20000274 &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;&amp;lt;Reset_Handler&amp;gt;:
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;cmp &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;r4&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;r1
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;  bcc CopyDataInit
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;#endif
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;&#x2F;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;* &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;Zero fill the bss segment. &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;*&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;&#x2F;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;  ldr r2&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;=_sbss
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;20000274&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;:	4a07      	ldr	r2&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, [&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;pc&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;#&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;28&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;]	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;@ (&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;20000294 &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;&amp;lt;LoopFillZerobss&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;0x14&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;&amp;gt;)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;  ldr r4&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;=_ebss
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;20000276&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;:	4c08      	ldr	r4&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, [&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;pc&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;#&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;32&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;]	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;@ (&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;20000298 &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;&amp;lt;LoopFillZerobss&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;0x18&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;&amp;gt;)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;&#x2F;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;* -- &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;snip &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;-- *&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5cb3fa;&quot;&gt;&#x2F;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;With this, we can place the entire firmware into RAM with a debugger!&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;letting-your-imagination-run-wild&quot;&gt;Letting your imagination run wild&lt;&#x2F;h2&gt;
+&lt;p&gt;At this point we&#x27;ve built a framework using a single, configurable linker script, with the build system being a single source of truth for both the linking and source-level configuration.&lt;&#x2F;p&gt;
+&lt;p&gt;From here, you can easily extend this to:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Generate security or monitoring canaries between sections&lt;&#x2F;li&gt;
+&lt;li&gt;Conditionally add logging or RTTI sections&lt;&#x2F;li&gt;
+&lt;li&gt;Move things into tightly coupled memories conditionally&lt;&#x2F;li&gt;
+&lt;li&gt;Enforce MPU or DMA required alignment based on where they are used&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;or go even further and split the single linker script template into multiple sources depending on the complexity of the project.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;real-world-examples&quot;&gt;Real-world examples&lt;&#x2F;h2&gt;
+&lt;p&gt;It might come as a no surprise that we&#x27;re not the first ones to think of doing this - infact, several high-profile embedded projects already use linker script generation.&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;For instance, the &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;zephyrproject-rtos&#x2F;zephyr&quot;&gt;Zephyr RTOS&lt;&#x2F;a&gt; also generates its linker scripts from a collection of sources.
+The memory regions are defined by the device tree, while the sections are defined in a multitude of linker script fragments, which can come from the SoC architecture, the concrete SoC that is being used and even third party software modules!
+All of this is then processed by the C preprocessor with configuration variables originating from Zephyr&#x27;s KConfig configuration system.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Another example would be the ESP-IDF SDK from Espressif, which has a &lt;a href=&quot;https:&#x2F;&#x2F;docs.espressif.com&#x2F;projects&#x2F;esp-idf&#x2F;en&#x2F;stable&#x2F;esp32&#x2F;api-guides&#x2F;linker-script-generation.html&quot;&gt;deep and extensible&lt;&#x2F;a&gt; linker script generation process built with Python.
+Initial reasons for linker script generation in ESP-IDF come from external flash use - where one chip can be paired with differenly sized flash and the peculiarities of the full Harvard architecture of their Xtensa-based chips however it has grown to be an useful tool for customers too.
+It too uses KConfig and assembles the final linker script from fragments, some of which can come from user or third party code.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Finally, one (at least for me) unexpected project which uses linker script processing is the &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;torvalds&#x2F;linux&#x2F;blob&#x2F;master&#x2F;arch&#x2F;x86&#x2F;kernel&#x2F;vmlinux.lds.S&quot;&gt;Linux kernel&lt;&#x2F;a&gt;!
+It has a C preprocessor pass on the linker scripts and uses KConfig variables for customization.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h2 id=&quot;closing&quot;&gt;Closing&lt;&#x2F;h2&gt;
+&lt;p&gt;In this blogpost we&#x27;ve shown how regular linker scripts can be a limitation for complex firmware projects and built a simple framework for getting around them.&lt;&#x2F;p&gt;
+&lt;p&gt;Hopefully, this gives you a taste of what&#x27;s possible and turns linker scripts from something you just have to deal with to something that is a regular part of the software you are building, or helps you debug an issue when working with some of the industry-standard projects which use linker script generation in the future!&lt;&#x2F;p&gt;
+</content>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>Using nix-shell to create and share reproducible embedded development environments</title>
+        <published>2023-08-27T00:00:00+00:00</published>
+        <updated>2023-08-27T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Unknown
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://dnedic.github.io/blog/nix-shell-embedded-development-environment/"/>
+        <id>https://dnedic.github.io/blog/nix-shell-embedded-development-environment/</id>
+        
+        <content type="html" xml:base="https://dnedic.github.io/blog/nix-shell-embedded-development-environment/">&lt;p&gt;Historically, working on embedded software meant using proprietary manufacturer-provided IDEs with tools like the toolchain, build system and debugger all integrated.
+As open source tooling eventually caught up and even surpassed closed source solutions in many regards we often no longer have to rely on closed solutions and can adopt traditional software development tools and practices.&lt;&#x2F;p&gt;
+&lt;p&gt;Unfortunately, this means that our development environment suddenly relies on a number of tools that have to work together and be correctly set up on every developer&#x27;s system.
+Keeping track of this can be a time-consuming process and issues can arise, including implicit tool dependencies and incompatibilities from tool version mismatches.&lt;&#x2F;p&gt;
+&lt;p&gt;In this post we will leverage the &lt;a href=&quot;https:&#x2F;&#x2F;nixos.org&#x2F;&quot;&gt;Nix&lt;&#x2F;a&gt; package manager to create a shareable and reproducible development environment, take a look at advantages it offers over existing solutions and by the end of the post, you should be able to quickly spin up a development environment, share it in the form of a single text file and be sure everyone using it will have the same exact setup.&lt;&#x2F;p&gt;
+&lt;p&gt;[TOC]&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;our-example-project&quot;&gt;Our example project&lt;&#x2F;h2&gt;
+&lt;p&gt;In &lt;a href=&quot;&#x2F;blog&#x2F;the-most-thoroughly-commented-embedded-cmakelists&#x2F;&quot;&gt;the previous blogpost&lt;&#x2F;a&gt;, we explored setting up a &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;DNedic&#x2F;most_commented_embedded_cmakelists&quot;&gt;simple CMake project&lt;&#x2F;a&gt; for an STM32 microcontroller using open source tooling.
+To build the project, we need a few tools:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;The &lt;a href=&quot;https:&#x2F;&#x2F;developer.arm.com&#x2F;downloads&#x2F;-&#x2F;arm-gnu-toolchain-downloads&quot;&gt;ARM Embedded GCC toolchain&lt;&#x2F;a&gt; to compile and link the sources as well as bundle the standard library&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;CMake&lt;&#x2F;code&gt; to generate our build system&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;Make&lt;&#x2F;code&gt; or &lt;code&gt;Ninja&lt;&#x2F;code&gt; to run the generated build system&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;Additionally, if we want to have a usable development environment, we need &lt;code&gt;git&lt;&#x2F;code&gt; for version control and &lt;code&gt;openocd&lt;&#x2F;code&gt; or another GDB server implementation for embedded in order to debug our firmware.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;challenges-of-manual-tool-management&quot;&gt;Challenges of manual tool management&lt;&#x2F;h2&gt;
+&lt;p&gt;There are a couple of ways to manually obtain the necessary tools for building the project, let&#x27;s go through some of them.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;the-system-package-manager&quot;&gt;The system package manager&lt;&#x2F;h3&gt;
+&lt;p&gt;One thing we could do is use our system&#x27;s package repositories, for instance on Arch Linux we would do:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;sudo&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; pacman&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt; -Syu&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; cmake make git arm-none-eabi-gcc arm-none-eabi-binutils arm-none-eabi-newlib openocd
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This is quite convenient as it only involves a single command and has ensured compatibility with our system.
+There are however quite a few hidden downsides with this approach:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Different developers working on the same project could be using different systems, leading to mismatches in tool versions&lt;&#x2F;li&gt;
+&lt;li&gt;Developers could be updating their system at different times&lt;&#x2F;li&gt;
+&lt;li&gt;The tools we need could be missing from our systems repositories&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h3 id=&quot;obtaining-binary-releases&quot;&gt;Obtaining binary releases&lt;&#x2F;h3&gt;
+&lt;p&gt;Alternatively, we could obtain binary releases of these tools. There is a bit more work involved with this approach, as we have to manually find, unpack and add all of these tools to our &lt;code&gt;PATH&lt;&#x2F;code&gt;. This process can quickly become time consuming with the number of machines we have to perform the procedure on. We could forget to update one and have the same exact version mismatch issues. Additionally, we no longer have ensured compatibility with the systems the developers are using due to fixed dependencies on python versions, glibc versions or system folder structure expectations.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;third-party-repositories&quot;&gt;Third party repositories&lt;&#x2F;h3&gt;
+&lt;p&gt;Finally, we can use third party repositories, like &lt;a href=&quot;https:&#x2F;&#x2F;xpack.github.io&#x2F;&quot;&gt;xPack&lt;&#x2F;a&gt;&#x27;s &lt;code&gt;xpm&lt;&#x2F;code&gt;. This approach combines the benefits of the first two approaches, as we can still use a single command to install all of the tools and packagers try their best to ensure compatibility with all systems. We can observe however that some critical issues do not go away, like someone forgetting to update their packages.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;universal-problems&quot;&gt;Universal problems&lt;&#x2F;h3&gt;
+&lt;p&gt;On top of issues specific to one of these approaches, the manual approach to tool management requires meticulous checking for compatibility between tools themselves and their various versions working together, which can be a very time consuming process.&lt;&#x2F;p&gt;
+&lt;p&gt;To sum everything up, our development environments are not &lt;strong&gt;self-contained&lt;&#x2F;strong&gt;, &lt;strong&gt;reproducible&lt;&#x2F;strong&gt; or &lt;strong&gt;managed&lt;&#x2F;strong&gt;.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;docker&quot;&gt;Docker&lt;&#x2F;h2&gt;
+&lt;p&gt;The most popular tool to deal with these issues at the moment is &lt;a href=&quot;https:&#x2F;&#x2F;www.docker.com&#x2F;&quot;&gt;Docker&lt;&#x2F;a&gt;.
+Docker is a container runtime, created to run lightweight isolated environments in some ways akin to virtual machines on top of our system.
+What this means for us is that we can create images which will hold all of our tools and can be used to build and debug our project.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;building-and-using-images&quot;&gt;Building and using images&lt;&#x2F;h3&gt;
+&lt;p&gt;Let&#x27;s take a look at a minimal image recipe required to build our project in the form of a &lt;code&gt;Dockerfile&lt;&#x2F;code&gt;:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;Dockerfile&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-Dockerfile &quot;&gt;&lt;code class=&quot;language-Dockerfile&quot; data-lang=&quot;Dockerfile&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5f697a;&quot;&gt;# Choose a base image
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;FROM&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; ubuntu:23.04
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5f697a;&quot;&gt;# Refresh the package index
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;RUN &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;apt-get -qq update
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5f697a;&quot;&gt;# Get the required packages
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;RUN &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;apt-get -y install cmake make git gcc-arm-none-eabi binutils-arm-none-eabi libnewlib-arm-none-eabi
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5f697a;&quot;&gt;# Specify the working directory inside the container
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;WORKDIR &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;&#x2F;usr&#x2F;project
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;To build our image and give it a name, we can run:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;docker&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; build&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt; -t&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; most_commented_embedded_cmakelists .
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;And to enter an interactive shell inside the container built from our image, we can use this command:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;docker&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; run&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt; -v &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;$(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;pwd&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;):&#x2F;usr&#x2F;project&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt; -it&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; most_commented_embedded_cmakelists
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Where the &lt;code&gt;-v&lt;&#x2F;code&gt; argument maps our current working directory to the containers &lt;code&gt;&#x2F;usr&#x2F;project&lt;&#x2F;code&gt; directory and &lt;code&gt;-it&lt;&#x2F;code&gt; runs the container in the interactive mode.&lt;&#x2F;p&gt;
+&lt;p&gt;In order to be able to debug our project, we have to add &lt;code&gt;openocd&lt;&#x2F;code&gt; and any debugger drivers to the list of packages:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;Dockerfile&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-Dockerfile &quot;&gt;&lt;code class=&quot;language-Dockerfile&quot; data-lang=&quot;Dockerfile&quot;&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;RUN apt-get -y install openocd libusb-1.0-0
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;then pass all usb devices through to the container every time we run it:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;docker&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; run&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt; -v &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;$(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;pwd&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;):&#x2F;usr&#x2F;project&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt; -v&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; &#x2F;dev&#x2F;bus&#x2F;usb:&#x2F;dev&#x2F;bus&#x2F;usb&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt; --privileged -it&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; most_commented_embedded_cmakelists
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h3 id=&quot;disadvantages-of-docker&quot;&gt;Disadvantages of Docker&lt;&#x2F;h3&gt;
+&lt;p&gt;Those observant enough have probably noticed a few downsides of this approach along the way.&lt;&#x2F;p&gt;
+&lt;p&gt;One major issue is that Docker images are not reproducible - the &lt;code&gt;apt-get&lt;&#x2F;code&gt; command in the &lt;code&gt;Dockerfile&lt;&#x2F;code&gt; gets the latest versions of the packages from the chosen base image repositories.
+This means that any time we run it, we may get different versions of packages.
+To combat this, we have to share images themselves, which can be rather large - the minimal image required to build our project alone is &lt;code&gt;2.9GB&lt;&#x2F;code&gt;.
+As an individual, we can upload these to &lt;a href=&quot;https:&#x2F;&#x2F;hub.docker.com&#x2F;&quot;&gt;Dockerhub&lt;&#x2F;a&gt; with an account, however businesses will have to pay a subscription for hosting these.&lt;&#x2F;p&gt;
+&lt;p&gt;Another issue is that we don&#x27;t have access to our system&#x27;s shell - our aliases, shell settings and more are not available to us in Docker images.&lt;&#x2F;p&gt;
+&lt;p&gt;Finally, it&#x27;s easy to see that Docker commands can get very unwieldy due to the number of things we have to pass through to the container.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;enter-nix&quot;&gt;Enter Nix&lt;&#x2F;h2&gt;
+&lt;p&gt;The Nix package manager released over 20 years ago but has recently caught the programming community spotlight with its ability to solve the dependency hell issues, work together with &lt;a href=&quot;https:&#x2F;&#x2F;nixos.org&#x2F;&quot;&gt;NixOS&lt;&#x2F;a&gt; to create reproducible Linux machines as well as create reproducible development environments.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;nix-shell&quot;&gt;nix-shell&lt;&#x2F;h3&gt;
+&lt;p&gt;For this blogpost, we will be utilizing the &lt;a href=&quot;https:&#x2F;&#x2F;nixos.org&#x2F;manual&#x2F;nix&#x2F;stable&#x2F;command-ref&#x2F;nix-shell.html&quot;&gt;nix-shell&lt;&#x2F;a&gt; command provided by the Nix package manager.
+Using nix-shell, you can:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;Create temporary environments for development, experimentation, or debugging without affecting your main system.&lt;&#x2F;li&gt;
+&lt;li&gt;Share these environments with others in the form of a simple text file, ensuring everyone is on the same page.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;A &lt;code&gt;nix-shell&lt;&#x2F;code&gt; environment is usually defined with a &lt;code&gt;shell.nix&lt;&#x2F;code&gt; or a &lt;code&gt;default.nix&lt;&#x2F;code&gt; file containing a Nix language expression.
+Here&#x27;s a basic example of what a &lt;code&gt;shell.nix&lt;&#x2F;code&gt; file might look like for our embedded project:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;let &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;pkgs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;import &lt;&#x2F;span&gt;&lt;span style=&quot;color:#9acc76;&quot;&gt;&amp;lt;nixpkgs&amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;{};
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;in &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;mkShell &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;{
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;packages &lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;[
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;gcc-arm-embedded
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;cmake
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;gnumake
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;git
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;openocd
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;  ];
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;By running &lt;code&gt;nix-shell&lt;&#x2F;code&gt; inside our project directory, the Nix package manager will download specified packages from the Nix repositories along with their dependencies and place them in &lt;code&gt;&#x2F;nix&#x2F;store&lt;&#x2F;code&gt; and then export the executables of these packages to our shells &lt;code&gt;PATH&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;We can easily check this by running &lt;code&gt;which&lt;&#x2F;code&gt; on one of our tools:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;which&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; arm-none-eabi-gcc
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;&#x2F;nix&#x2F;store&#x2F;im3iiikm684j0dn166k78japxlknsrki-gcc-arm-embedded-12.2.rel1&#x2F;bin&#x2F;arm-none-eabi-gcc
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;We can also run &lt;code&gt;nix-shell&lt;&#x2F;code&gt; with the &lt;code&gt;--pure&lt;&#x2F;code&gt; argument in order to verify that all of our tools are present and that building or debugging the project isn&#x27;t using our system&#x27;s tools by accident.
+This removes almost everything from our PATH before evaluating &lt;code&gt;nix-shell&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;Additionally, if we want to execute any commands in the shell on entry, we can use the &lt;code&gt;shellHook&lt;&#x2F;code&gt; argument of &lt;code&gt;mkShell&lt;&#x2F;code&gt;:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;mkShell &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;{
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5f697a;&quot;&gt;# --snip--
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;shellHook &lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#9acc76;&quot;&gt;&amp;quot;echo &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;\&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#9acc76;&quot;&gt;Hello from our shell&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;\&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#9acc76;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This can be useful if we want to start a server to talk to our device or automatically build the project upon entry.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;version-pinning&quot;&gt;Version pinning&lt;&#x2F;h3&gt;
+&lt;p&gt;With this configuration, package versions can change every time we run &lt;code&gt;nix-shell&lt;&#x2F;code&gt; depending on the package versions in the &lt;code&gt;nixpkgs&lt;&#x2F;code&gt; collection however.
+To get true reproducibility, we have to somehow specify the package versions.&lt;&#x2F;p&gt;
+&lt;p&gt;Usually, this is done by pinning &lt;code&gt;nixpkgs&lt;&#x2F;code&gt; to a specific point in time.
+This can be done in one of the following ways:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;By using &lt;code&gt;builtins.fetchTarball&lt;&#x2F;code&gt; and specifying the &lt;code&gt;nixpkgs&lt;&#x2F;code&gt; tarball&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;let &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;pkgs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;import &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;builtins&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;fetchTarball &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;{
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;url &lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#9acc76;&quot;&gt;&amp;quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nixpkgs&#x2F;archive&#x2F;976fa3369d722e76f37c77493d99829540d43845.tar.gz&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}) {};
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;By using &lt;code&gt;builtins.fetchGit&lt;&#x2F;code&gt; and specifying a git revision&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;let &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;pkgs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;import &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;builtins&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;fetchGit &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;{
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;url &lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#9acc76;&quot;&gt;&amp;quot;https:&#x2F;&#x2F;github.com&#x2F;nixos&#x2F;nixpkgs&#x2F;&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;ref &lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#9acc76;&quot;&gt;&amp;quot;refs&#x2F;heads&#x2F;nixos-unstable&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;rev &lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#9acc76;&quot;&gt;&amp;quot;976fa3369d722e76f37c77493d99829540d43845&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}) {};
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;While Nix itself does not provide an easy way to obtain these arguments based on the package versions we need the &lt;a href=&quot;https:&#x2F;&#x2F;lazamar.co.uk&#x2F;nix-versions&#x2F;&quot;&gt;nix-versions&lt;&#x2F;a&gt; website can be used to obtain them and even generate code blocks shown above.&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;Note:&lt;&#x2F;strong&gt; It is possible that &lt;code&gt;mkShell&lt;&#x2F;code&gt; will fail when going too far back in time with &lt;code&gt;nixpkgs&lt;&#x2F;code&gt; versions. This is because &lt;code&gt;mkShell&lt;&#x2F;code&gt; was introduced in 2018 as a convenience wrapper around &lt;code&gt;stdenv.mkDerivation&lt;&#x2F;code&gt; for &lt;code&gt;nix-shell&lt;&#x2F;code&gt; purposes. Here is how we would achieve the same result using &lt;code&gt;stdenv.mkDerivation&lt;&#x2F;code&gt;:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;stdenv&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;mkDerivation &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;{
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;name &lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#9acc76;&quot;&gt;&amp;quot;my-shell&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;buildInputs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;[
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;gcc-arm-embedded
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;cmake
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;gnumake
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;git
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;openocd
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;  ];
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;If however the nixpkgs revision for one package does not provide the desired version of another package, it is possible to import multiple &lt;code&gt;nixpkgs&lt;&#x2F;code&gt; revisions like so:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;let
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;pkgs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;import &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;builtins&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;fetchTarball &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;{
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;url &lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#9acc76;&quot;&gt;&amp;quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nixpkgs&#x2F;archive&#x2F;976fa3369d722e76f37c77493d99829540d43845.tar.gz&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;  }) {};
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;pkgs_arm_gcc &lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;import &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;builtins&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;fetchTarball &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;{
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;url &lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#9acc76;&quot;&gt;&amp;quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nixpkgs&#x2F;archive&#x2F;b0f0b5c6c021ebafbd322899aa9a54b87d75a313.tar.gz&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;  }) {};
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;in &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;mkShell &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;{
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;packages &lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;[
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;pkgs_arm_gcc&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;gcc-arm-embedded
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;cmake
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;gnumake
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;git
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;openocd
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;  ];
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;With this, we have a fully reproducible and managed embedded development environment!
+This means that we can &lt;strong&gt;treat our development environment as code&lt;&#x2F;strong&gt; and anyone pulling our repository can instantly obtain the same environment we had when developing or deploying the project.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;using-overlays&quot;&gt;Using overlays&lt;&#x2F;h3&gt;
+&lt;p&gt;Our example project so far required a relatively small number of tools compared to some manufacturer SDKs which can bundle a large number of tools and dependencies.
+An example of such an SDK would be &lt;a href=&quot;https:&#x2F;&#x2F;docs.espressif.com&#x2F;projects&#x2F;esp-idf&#x2F;en&#x2F;latest&#x2F;esp32&#x2F;get-started&#x2F;&quot;&gt;ESP-IDF&lt;&#x2F;a&gt; from Espressif, which has a host of toolchains, python tools and dependencies.
+In situations like this, we may not want to manually specify our development environment, but instead rely on manufacturer or community maintained solutions and build on top of them.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;mirrexagon&#x2F;nixpkgs-esp-dev&quot;&gt;nixpkgs-esp-dev&lt;&#x2F;a&gt; offers such a solution for ESP-IDF, and looking at the code you will quickly realize the futility of maintaining such a solution yourself.
+To demonstrate the power of &lt;code&gt;nixpkgs-esp-dev&lt;&#x2F;code&gt; we will use the &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;espressif&#x2F;esp-usb-bridge&quot;&gt;esp-usb-bridge&lt;&#x2F;a&gt; project as an example.
+&lt;code&gt;esp-usb-bridge&lt;&#x2F;code&gt; lets you create your own programmer and &lt;code&gt;JTAG&lt;&#x2F;code&gt; probe with an &lt;code&gt;ESP32-S2&lt;&#x2F;code&gt; or &lt;code&gt;ESP32-S3&lt;&#x2F;code&gt; based board.&lt;&#x2F;p&gt;
+&lt;p&gt;After pulling the project, we can create a &lt;code&gt;shell.nix&lt;&#x2F;code&gt; file according to the &lt;code&gt;nixpkgs-esp-dev&lt;&#x2F;code&gt; instructions and pin the ESP-IDF version:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;let
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;nixpkgs-esp-dev &lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;builtins&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;fetchGit &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;{
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;url &lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#9acc76;&quot;&gt;&amp;quot;https:&#x2F;&#x2F;github.com&#x2F;mirrexagon&#x2F;nixpkgs-esp-dev.git&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;rev &lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#9acc76;&quot;&gt;&amp;quot;4cc9ec3f8e992ed15924672192a2ce5fb0223121&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;  };
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;pkgs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;import &lt;&#x2F;span&gt;&lt;span style=&quot;color:#9acc76;&quot;&gt;&amp;lt;nixpkgs&amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;{
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;overlays &lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;[ (&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;import &lt;&#x2F;span&gt;&lt;span style=&quot;color:#9acc76;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c94e42;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;nixpkgs-esp-dev&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c94e42;&quot;&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#9acc76;&quot;&gt;&#x2F;overlay.nix&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;) ];
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;  };
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#cd74e8;&quot;&gt;in &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;mkShell &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;{
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#db9d63;&quot;&gt;packages &lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;[
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#adb7c9;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;esp-idf-full
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;  ];
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;From this point, we can build, flash and debug the project and continue expanding our new development environment with any new requirements we have by extending the &lt;code&gt;shell.nix&lt;&#x2F;code&gt; file.&lt;&#x2F;p&gt;
+&lt;p&gt;Another such example is the &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;oxalica&#x2F;rust-overlay&quot;&gt;rust-overlay&lt;&#x2F;a&gt; which lets you manage rust channels and architectures easily.&lt;&#x2F;p&gt;
+&lt;p&gt;These examples show us an important aspect of Nix - composability, we can import another &lt;code&gt;.nix&lt;&#x2F;code&gt; file and use it as an expression.
+The &lt;code&gt;overlay&lt;&#x2F;code&gt; argument lets us customize the &lt;code&gt;nixpkgs&lt;&#x2F;code&gt; collection by overriding packages or introducing new ones.
+There are many community maintained overlays, which can also be combined to save you the effort of maintaining huge environments.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;third-party-tools&quot;&gt;Third party tools&lt;&#x2F;h3&gt;
+&lt;p&gt;Finally, there are quite a few projects built on top of &lt;code&gt;nix-shell&lt;&#x2F;code&gt; that offer user convenience.&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;nix-community&#x2F;lorri&quot;&gt;lorri&lt;&#x2F;a&gt; for instance offers automatic &lt;code&gt;nix-shell&lt;&#x2F;code&gt; invocation upon entering a project&#x27;s directory providing seamless development, enables downloading newer package versions while in the shell itself and gives you tools to prevent the Nix garbage collector from sweeping away your &lt;code&gt;nix-shell&lt;&#x2F;code&gt; obtained tools when invoked.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Another useful third party tool is &lt;a href=&quot;https:&#x2F;&#x2F;www.jetpack.io&#x2F;devbox&quot;&gt;devbox&lt;&#x2F;a&gt; which offers a convenient wrapper around &lt;code&gt;nix-shell&lt;&#x2F;code&gt; and lets you forego the Nix language entirely, specifying your development environment in JSON. It also makes package pinning much more elegant and has a plugin system.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;For those using VSCode, &lt;a href=&quot;https:&#x2F;&#x2F;marketplace.visualstudio.com&#x2F;items?itemName=arrterian.nix-env-selector&quot;&gt;Nix Environment Selector&lt;&#x2F;a&gt; provides an elegant way to run your entire VSCode instance in the &lt;code&gt;nix-shell&lt;&#x2F;code&gt; environment.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h2 id=&quot;closing&quot;&gt;Closing&lt;&#x2F;h2&gt;
+&lt;p&gt;In this blogpost we covered some of the biggest challenges encountered by developers when switching to open tooling development environments, explored state of the art solutions and where they falter and then introduced &lt;code&gt;nix-shell&lt;&#x2F;code&gt; as a viable alternative.&lt;&#x2F;p&gt;
+&lt;p&gt;At this point you should be ready to give &lt;code&gt;nix-shell&lt;&#x2F;code&gt; a shot the next time you&#x27;re required to manage an embedded development environment and save yourself and your team from the pains of manual tool management.&lt;&#x2F;p&gt;
+&lt;p&gt;For further reading you might be interested in reading about &lt;a href=&quot;https:&#x2F;&#x2F;interrupt.memfault.com&#x2F;blog&#x2F;reproducible-firmware-builds&quot;&gt;providing reproducible firmware builds&lt;&#x2F;a&gt; for your customers or partners, which Nix takes you a long way to or exploring &lt;a href=&quot;https:&#x2F;&#x2F;www.tweag.io&#x2F;blog&#x2F;2020-05-25-flakes&#x2F;&quot;&gt;Nix flakes&lt;&#x2F;a&gt; as a newer, experimental way to achieve the same goals.&lt;&#x2F;p&gt;
+</content>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>The most thoroughly commented embedded CMakeLists file</title>
+        <published>2023-01-05T00:00:00+00:00</published>
+        <updated>2023-01-05T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Unknown
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://dnedic.github.io/blog/the-most-thoroughly-commented-embedded-cmakelists/"/>
+        <id>https://dnedic.github.io/blog/the-most-thoroughly-commented-embedded-cmakelists/</id>
+        
+        <content type="html" xml:base="https://dnedic.github.io/blog/the-most-thoroughly-commented-embedded-cmakelists/">&lt;p&gt;Many embedded software engineers have had to deal with build systems that are either non cross-platform or a part of the IDE they are using, don&#x27;t offer easy composability or per-library configuration, provide no testing support or ways to generate or package files without using a third party scripting language.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;a href=&quot;https:&#x2F;&#x2F;cmake.org&#x2F;&quot;&gt;CMake&lt;&#x2F;a&gt; is a build system that offers solutions to many of those problems and is already well adopted in the world of traditional software development.
+Inspired by &lt;a href=&quot;https:&#x2F;&#x2F;blog.thea.codes&#x2F;the-most-thoroughly-commented-linker-script&#x2F;&quot;&gt;The most thoroughly commented linker script&lt;&#x2F;a&gt; blogpost and having used CMake in two different professional environments, I have decided to write an overview of a minimal CMakeLists file for an embedded project.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;DNedic&#x2F;most_commented_embedded_cmakelists&#x2F;blob&#x2F;main&#x2F;CMakeLists.txt&quot;&gt;Here&lt;&#x2F;a&gt; is the CMakeLists file we are going to be taking a look at. It is a part of a &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;DNedic&#x2F;most_commented_embedded_cmakelists&quot;&gt;CMake STM32 project&lt;&#x2F;a&gt; i created as a demonstration and uses an STM32F103 MCU.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;the-minimum-version&quot;&gt;The minimum version&lt;&#x2F;h2&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;cmake_minimum_required&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;VERSION &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;3.21)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This call is required at the top of every CMakeLists file, it sets the minimum CMake version our project can be built with, and this decides the features that can be used.
+Generally it is advisable to set it as low as possible until features from the newer versions are required.
+Another good approach is to check &lt;a href=&quot;https:&#x2F;&#x2F;repology.org&#x2F;project&#x2F;cmake&#x2F;versions&quot;&gt;repology&lt;&#x2F;a&gt; for the CMake versions shipped in most used Linux distributions.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;project-declaration&quot;&gt;Project declaration&lt;&#x2F;h2&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;project&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(most_commented_embedded_cmakelists
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;VERSION &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;1.0.0
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    DESCRIPTION &lt;&#x2F;span&gt;&lt;span style=&quot;color:#9acc76;&quot;&gt;&amp;quot;This is a demo project&amp;quot;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;The &lt;a href=&quot;https:&#x2F;&#x2F;cmake.org&#x2F;cmake&#x2F;help&#x2F;latest&#x2F;command&#x2F;project.html&quot;&gt;project()&lt;&#x2F;a&gt; call sets up the project name and optionally version, description, homepage and more and stores them in variables that can be used later.
+For instance, the project name is stored in &lt;code&gt;PROJECT_NAME&lt;&#x2F;code&gt;, description in &lt;code&gt;PROJECT_DESCRIPTION&lt;&#x2F;code&gt; and so on.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;language-settings&quot;&gt;Language settings&lt;&#x2F;h2&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;enable_language&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(C ASM)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This sets the languages the project is going to be using, if C++ support is desired add &lt;code&gt;CXX&lt;&#x2F;code&gt; to the list.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;set&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;CMAKE_C_STANDARD &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;11)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;set&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;CMAKE_C_STANDARD_REQUIRED &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;ON)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This sets the language standard globally and whether the standard is a requirement.
+This may not be required, however due to the non-backward compatible nature of C and C++ it is preferred.&lt;&#x2F;p&gt;
+&lt;p&gt;C11 is a good first choice for projects as it provides useful additions like &lt;a href=&quot;https:&#x2F;&#x2F;en.cppreference.com&#x2F;w&#x2F;c&#x2F;atomic&quot;&gt;atomics&lt;&#x2F;a&gt;, however it does away with optional features like &lt;a href=&quot;https:&#x2F;&#x2F;en.wikipedia.org&#x2F;wiki&#x2F;Variable-length_array&quot;&gt;VLAs&lt;&#x2F;a&gt;, so C99 or lower might be preferable when working with legacy projects.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;set&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;CMAKE_C_EXTENSIONS &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;OFF)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This controls the inclusion of the &lt;a href=&quot;https:&#x2F;&#x2F;gcc.gnu.org&#x2F;onlinedocs&#x2F;gcc&#x2F;C-Extensions.html&quot;&gt;GNU extensions&lt;&#x2F;a&gt; to the C language globally, &lt;code&gt;OFF&lt;&#x2F;code&gt; is preferred for more standard and portable C however GNU extensions can provide useful things on top of the base standard.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;compiler-options&quot;&gt;Compiler options&lt;&#x2F;h2&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;set&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;MCU_OPTIONS
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -mcpu=cortex-m3
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -mthumb
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This sets a custom &lt;a href=&quot;https:&#x2F;&#x2F;gcc.gnu.org&#x2F;onlinedocs&#x2F;gcc&#x2F;ARM-Options.html&quot;&gt;microcontroller specific compiler flags&lt;&#x2F;a&gt; variable.
+First, the cpu variant is set and then the compiler is told to emit &lt;a href=&quot;https:&#x2F;&#x2F;developer.arm.com&#x2F;documentation&#x2F;ddi0337&#x2F;e&#x2F;Programmer-s-Model&#x2F;Instruction-set&quot;&gt;thumb instructions&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;set&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;EXTRA_OPTIONS
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -fdata-sections
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -ffunction-sections
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This sets up a variable containing extra functionality compiler flags.
+The flags added here ensure that all objects are placed in separate linker sections. We will see later why that is important.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;set&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;OPTIMIZATION_OPTIONS
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    $&amp;lt;$&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;CONFIG&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;:&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;Debug&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;&amp;gt;:-&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;Og&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;&amp;gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Here the compiler optimization flags custom variable is created. The weird looking expression conditionally sets compiler optimization level to &lt;code&gt;-Og&lt;&#x2F;code&gt; when building with the Debug &lt;a href=&quot;https:&#x2F;&#x2F;cmake.org&#x2F;cmake&#x2F;help&#x2F;latest&#x2F;manual&#x2F;cmake-buildsystem.7.html#build-configurations&quot;&gt;configuration&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;As most microcontrollers are rather limited in terms of flash size and cpu speed, the default
+optimization level of &lt;code&gt;-O0&lt;&#x2F;code&gt; is not suitable. &lt;code&gt;-Og&lt;&#x2F;code&gt; is an optimization level created for the best tradeoff
+between size, speed and debugging viability.&lt;&#x2F;p&gt;
+&lt;p&gt;Other configurations use their default compiler optimization levels, &lt;code&gt;-O2&lt;&#x2F;code&gt; for the &lt;code&gt;Release&lt;&#x2F;code&gt; configuration and &lt;code&gt;-Os&lt;&#x2F;code&gt; for the &lt;code&gt;MinSizeRel&lt;&#x2F;code&gt; configuration, so nothing else is added.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;set&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;DEPENDENCY_INFO_OPTIONS
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Here the preprocessor flags custom variable containing dependency info options is created.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;MMD
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This line tells the preprocessor to generate dependency files for Make-compatible build systems instead of full preprocessor output, while removing mentions to system header files.&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;Note:&lt;&#x2F;strong&gt; If we need the preprocessor output ourselves we can pass the &lt;code&gt;-E&lt;&#x2F;code&gt; argument to the compiler instead.&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;MP
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This option instructs the preprocessor to add a phony target for each dependency other than the main file to work around errors the build system gives if you remove header files without updating it.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;MF&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt; &amp;quot;$(@:%.o=%.d)&amp;quot;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;The last line specifies that we want the dependency files to be generated with the same name as the corresponding object file.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;set&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;DEBUG_INFO_OPTIONS
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -g3
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -gdwarf-2
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This creates a custom variable containing &lt;a href=&quot;https:&#x2F;&#x2F;gcc.gnu.org&#x2F;onlinedocs&#x2F;gcc&#x2F;Debugging-Options.html&quot;&gt;compiler flags for generating debug information&lt;&#x2F;a&gt;.
+The first line tells the compiler to produce the debugging output and the level of detail while the second line configures the debug output format and version.
+We are using dwarf version 2 for best debugger compatibility.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;add_compile_options&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    ${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;MCU_OPTIONS&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    ${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;EXTRA_OPTIONS&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    ${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;DEBUG_INFO_OPTIONS&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    ${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;DEPENDENCY_INFO_OPTIONS&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    ${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;OPTIMIZATION_OPTIONS&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Finally, all the created variables are used to set the global compiler options.&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;Note:&lt;&#x2F;strong&gt; It is possible to override these per-target by using &lt;code&gt;target_compile_options()&lt;&#x2F;code&gt;, for instance to apply a higher optimization level to third party libraries we are not going to be debugging.&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;h2 id=&quot;linker-options&quot;&gt;Linker options&lt;&#x2F;h2&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;add_link_options&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Here we are adding global linker options.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    ${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;MCU_OPTIONS&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;First, it is required to pass the previously created microcontroller specific flags variable created earlier.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;specs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;=nano.specs
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This tells the linker to include the nano variant of the &lt;a href=&quot;https:&#x2F;&#x2F;sourceware.org&#x2F;newlib&#x2F;&quot;&gt;newlib&lt;&#x2F;a&gt; standard library which is optimized for minimal binary size and RAM use. The regular newlib variant is used simply by not passing this.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;T&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;CMAKE_SOURCE_DIR&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}&#x2F;STM32F103C8Tx_FLASH.ld
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Here the linkerscript of the chip is passed. The linkerscript tells the linker where to store the objects in memory.
+I recommend reading the already mentioned &lt;a href=&quot;https:&#x2F;&#x2F;blog.thea.codes&#x2F;the-most-thoroughly-commented-linker-script&#x2F;&quot;&gt;most thoroughly commented linker script&lt;&#x2F;a&gt; blogpost.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;Wl&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;,-Map=${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;PROJECT_NAME&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}.map,--cref
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This directive instructs the linker to generate a mapfile. Mapfiles contain information about the final layout of the firmware binary and are an invaluable resource for development.
+I recommend reading &lt;a href=&quot;https:&#x2F;&#x2F;interrupt.memfault.com&#x2F;blog&#x2F;get-the-most-out-of-the-linker-map-file&quot;&gt;this excellent Interrupt blogpost&lt;&#x2F;a&gt; for a quick introduction.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;Wl&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;,--gc-sections
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This is the linker flag for removing the unused sections from the final binary, it works in conjunction with the previously mentioned &lt;code&gt;-fdata-sections&lt;&#x2F;code&gt; and &lt;code&gt;-ffunction-sections&lt;&#x2F;code&gt; compiler flags to remove all unused objects from the final binary.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;linking-the-standard-library&quot;&gt;Linking the standard library&lt;&#x2F;h2&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;link_libraries&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#9acc76;&quot;&gt;&amp;quot;-lc -lm -lnosys&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This call tells the linker to link the standard library components to all the libraries and executables
+added after.&lt;&#x2F;p&gt;
+&lt;p&gt;The order of the standard library calls is important as libraries can only see symbols from libraries on their right:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;-lc is the libc containing most standard library features&lt;&#x2F;li&gt;
+&lt;li&gt;-lm is the libm containing math functionality&lt;&#x2F;li&gt;
+&lt;li&gt;-lnosys provides stubs for the syscalls, essentially placeholders for what would be operating system calls&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;Note:&lt;&#x2F;strong&gt; CMake also offers the &lt;code&gt;CMAKE_C_STANDARD_LIBRARIES&lt;&#x2F;code&gt; variable, whose value is always appended at the end of the final linking command.&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;h2 id=&quot;adding-library-subprojects&quot;&gt;Adding library subprojects&lt;&#x2F;h2&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;add_subdirectory&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(Drivers)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;When a subdirectory is added, the CMakeLists file contained in that subdirectory is evaluated, this is usually chained for composability.
+In this case the &lt;code&gt;Drivers&lt;&#x2F;code&gt; CMakeLists file creates a static library called &lt;code&gt;Drivers&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;target_include_directories&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(Drivers
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;PRIVATE
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    Core&#x2F;Inc
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;We need to include the &lt;code&gt;Core&#x2F;Inc&lt;&#x2F;code&gt; for the &lt;code&gt;Drivers&lt;&#x2F;code&gt; library, as it depends on the definitions inside the &lt;code&gt;Core&lt;&#x2F;code&gt; headers.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;the-executable&quot;&gt;The executable&lt;&#x2F;h2&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;set&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;EXECUTABLE &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;PROJECT_NAME&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}.elf)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This creates a variable containing the executable name by appending the &lt;a href=&quot;https:&#x2F;&#x2F;en.wikipedia.org&#x2F;wiki&#x2F;Executable_and_Linkable_Format&quot;&gt;ELF&lt;&#x2F;a&gt; extension to the project name.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;add_executable&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;EXECUTABLE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    Core&#x2F;Src&#x2F;main.c
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    Core&#x2F;Src&#x2F;stm32f1xx_hal_msp.c
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    Core&#x2F;Src&#x2F;stm32f1xx_it.c
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    Core&#x2F;Src&#x2F;system_stm32f1xx.c
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    startup_stm32f103xb.s
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Here we are creating the executable target and adding top-level sources to it.
+An executable is the final product of the build process, in this case our firmware.
+Note the startup file gets added along with the C sources.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;target_include_directories&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;EXECUTABLE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;PRIVATE
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    Core&#x2F;Inc
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Add the include directories for the executable.
+Since we don&#x27;t need the includes to propagate up as our executable is the final product of the build process, we are including as &lt;code&gt;PRIVATE&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;target_compile_options&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;EXECUTABLE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;PRIVATE
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -Wall
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -Wextra
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -Wshadow
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -Wconversion
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    -Wdouble-promotion
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This adds &lt;a href=&quot;https:&#x2F;&#x2F;gcc.gnu.org&#x2F;onlinedocs&#x2F;gcc&#x2F;Warning-Options.html&quot;&gt;additional warning compiler flags&lt;&#x2F;a&gt; to our executable target, enabling them for our sources, but not third party libraries.
+All of these provide much more safety if not ignored.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;target_link_libraries&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;EXECUTABLE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;PRIVATE
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    Drivers
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Here we link the libraries to the executable. Same principle applies to the reasoning behind &lt;code&gt;PRIVATE&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;post-build-commands&quot;&gt;Post-build commands&lt;&#x2F;h2&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;add_custom_command&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;TARGET &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;EXECUTABLE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;POST_BUILD
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;COMMAND &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;CMAKE_SIZE_UTIL&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;} ${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;EXECUTABLE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This creates a custom command that prints out the firmware binary size information.
+Example:&lt;&#x2F;p&gt;
+&lt;pre style=&quot;background-color:#2b303b;color:#6c7079;&quot;&gt;&lt;code&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;text   data    bss    dec    hex filename
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;3432     20   1572   5024   13a0 most_commented_embedded_cmakelists.elf
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;&lt;code&gt;text&lt;&#x2F;code&gt; is the code, &lt;code&gt;data&lt;&#x2F;code&gt; stores variables that have a non-zero initial value and have to be stored in flash,
+&lt;code&gt;bss&lt;&#x2F;code&gt; stores zero initial values that only take up ram. &lt;code&gt;dec&lt;&#x2F;code&gt; and &lt;code&gt;hex&lt;&#x2F;code&gt; are just the cumulative size in decimal and hexadecimal notation respectively.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;a href=&quot;https:&#x2F;&#x2F;mcuoneclipse.com&#x2F;2013&#x2F;04&#x2F;14&#x2F;text-data-and-bss-code-and-data-size-explained&#x2F;&quot;&gt;Here&lt;&#x2F;a&gt; is a good resource for understanding these sections and to learn more about output options.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;cmake&quot; style=&quot;background-color:#2b303b;color:#6c7079;&quot; class=&quot;language-cmake &quot;&gt;&lt;code class=&quot;language-cmake&quot; data-lang=&quot;cmake&quot;&gt;&lt;span style=&quot;color:#5ebfcc;&quot;&gt;add_custom_command&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;TARGET &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;EXECUTABLE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;POST_BUILD
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;COMMAND &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;CMAKE_OBJCOPY&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;} -O ihex ${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;EXECUTABLE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;} ${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;PROJECT_NAME&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}.hex
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;COMMAND &lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;CMAKE_OBJCOPY&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;} -O binary ${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;EXECUTABLE&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;} ${&lt;&#x2F;span&gt;&lt;span style=&quot;color:#eb6772;&quot;&gt;PROJECT_NAME&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;}.bin
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#abb2bf;&quot;&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This creates a custom command to generate binary and hex files.
+These can be used depending on which method of loading the firmware to the MCU is used.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;closing&quot;&gt;Closing&lt;&#x2F;h2&gt;
+&lt;p&gt;Hopefully this gives you an overview of how a minimal CMakeLists file for an embedded project looks like and peaked your curiosity if you&#x27;ve never used CMake for embedded projects.&lt;&#x2F;p&gt;
+&lt;p&gt;It is worth keeping in mind that this article is not a complete guide to CMake and doesn&#x27;t go into toolchain files, library CMakeLists and other things required for a complete CMake-based embedded project, however the &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;DNedic&#x2F;most_commented_embedded_cmakelists&quot;&gt;project on GitHub&lt;&#x2F;a&gt; used for demonstration contains all of those and can be used as a template.&lt;&#x2F;p&gt;
+</content>
+        
+    </entry>
+</feed>

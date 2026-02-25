@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="x-ua-compatible" content="ie=edge" />
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+
+   <style>
+      :root {
+        --accent-color: #007ea7;
+        --accent-color-light: #007ea7;
+        --accent-color-2: #F2545B;
+        --accent-overlay-color: #FEFEFF;
+        --body-bg: #FEFEFF;
+        --body-color: #2E2F2F;
+        --heading-color: #2E2F2F;
+        --table-bg-even: #f3f3f3;
+        --table-border-bottom: #dddddd;
+      }
+      
+    </style>
+
+    <meta name="theme-color" content="#007ea7" />
+
+    
+      <link rel="icon" href="https:&#x2F;&#x2F;dnedic.github.io&#x2F;processed_images&#x2F;profile_small.0c7adb3698cde8cd.jpg" />
+      <link rel="apple-touch-icon" sizes="48x48" href="https:&#x2F;&#x2F;dnedic.github.io&#x2F;processed_images&#x2F;profile_small.0c7adb3698cde8cd.jpg" />
+      <link rel="apple-touch-icon" sizes="72x72" href="https:&#x2F;&#x2F;dnedic.github.io&#x2F;processed_images&#x2F;profile_small.217830fedc41980c.jpg" />
+      <link rel="apple-touch-icon" sizes="96x96" href="https:&#x2F;&#x2F;dnedic.github.io&#x2F;processed_images&#x2F;profile_small.0e4140f00554bdce.jpg" />
+      <link rel="apple-touch-icon" sizes="144x144" href="https:&#x2F;&#x2F;dnedic.github.io&#x2F;processed_images&#x2F;profile_small.4f4b1a8b2004f3cf.jpg" />
+      <link rel="apple-touch-icon" sizes="192x192" href="https:&#x2F;&#x2F;dnedic.github.io&#x2F;processed_images&#x2F;profile_small.0cd4efe546c1e873.jpg" />
+      <link rel="apple-touch-icon" sizes="256x256" href="https:&#x2F;&#x2F;dnedic.github.io&#x2F;processed_images&#x2F;profile_small.8d43f2a015690d0e.jpg" />
+      <link rel="apple-touch-icon" sizes="384x384" href="https:&#x2F;&#x2F;dnedic.github.io&#x2F;processed_images&#x2F;profile_small.8856056bad7b061d.jpg" />
+      <link rel="apple-touch-icon" sizes="512x512" href="https:&#x2F;&#x2F;dnedic.github.io&#x2F;processed_images&#x2F;profile_small.9e2861538193562f.jpg" />
+      
+    
+
+    
+
+    <link rel="canonical" href="https://dnedic.github.io/blog/nix-shell-embedded-development-environment">
+
+    <meta name="robots" content="index, follow">
+
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Using nix-shell to create and share reproducible embedded development environments">
+    <meta property="og:url" content="https://dnedic.github.io/blog/nix-shell-embedded-development-environment">
+
+    <meta name="twitter:card" content="summary">
+
+    
+
+    
+
+    
+      
+        <meta name="description" content="" />
+        <meta name="twitter:description" content="">
+        <meta name="og:description" content="">
+      
+    
+
+    
+      <meta name="twitter:title" content="Using nix-shell to create and share reproducible embedded development environments">
+    
+
+    
+      <link rel="prerender" href="&#x2F;blog&#x2F;" />
+    
+
+    <link rel="prefetch" href="https:&#x2F;&#x2F;dnedic.github.io&#x2F;processed_images&#x2F;profile_small.a00a785a6bbff823.jpg" />
+
+    <title>
+      
+        
+          Using nix-shell to create and share reproducible embedded development environments
+        
+      
+    </title>
+
+    
+
+
+    
+      <link rel="stylesheet" href="https://dnedic.github.io/main.css">
+    
+    
+  
+
+  
+
+  
+    <link rel="prerender"  href="https://dnedic.github.io/tags/nix/">
+  
+    <link rel="prerender"  href="https://dnedic.github.io/tags/embedded/">
+  
+    <link rel="prerender"  href="https://dnedic.github.io/tags/docker/">
+  
+    <link rel="prerender"  href="https://dnedic.github.io/tags/cmake/">
+  
+    <link rel="prerender"  href="https://dnedic.github.io/tags/stm32/">
+  
+    <link rel="prerender"  href="https://dnedic.github.io/tags/esp-idf/">
+  
+    <link rel="prerender"  href="https://dnedic.github.io/tags/rust/">
+  
+
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "NewsArticle",
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://google.com/article"
+      },
+      "headline": "Using nix-shell to create and share reproducible embedded development environments",
+      "image": [],
+      "datePublished": "2023-08-27T00:00:00+00:00",
+      "dateModified": "2023-08-27T00:00:00+00:00"
+    }
+  </script>
+
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        
+
+        
+        {
+          
+          "@type": "ListItem",
+          "position": 1,
+          "name": "",
+          "item": "https://dnedic.github.io/"
+        },
+        
+        {
+          
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Djordje Nedic | Blog",
+          "item": "https://dnedic.github.io/blog/"
+        },
+        
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "Using nix-shell to create and share reproducible embedded development environments",
+          "item": "https://dnedic.github.io/blog/nix-shell-embedded-development-environment/"
+        }
+      ]
+    }
+  </script>
+
+  </head>
+  <body>
+    
+      <header>
+        <a class="profile-icon" href="/">
+          <img src="https:&#x2F;&#x2F;dnedic.github.io&#x2F;processed_images&#x2F;profile_small.a00a785a6bbff823.jpg" alt="profile picture">
+        </a>
+        <nav>
+          
+            <a href="&#x2F;blog&#x2F;">Blog</a>
+          
+        </nav>
+      </header>
+    
+    <main>
+    
+  <div class="post-title">
+    <h1>Using nix-shell to create and share reproducible embedded development environments</h1>
+    <small>
+      August 27, 2023
+      
+        -
+        <span class="tags">
+          
+            <a href="https://dnedic.github.io/tags/nix/">Nix</a>
+          
+            <a href="https://dnedic.github.io/tags/embedded/">Embedded</a>
+          
+            <a href="https://dnedic.github.io/tags/docker/">Docker</a>
+          
+            <a href="https://dnedic.github.io/tags/cmake/">CMake</a>
+          
+            <a href="https://dnedic.github.io/tags/stm32/">STM32</a>
+          
+            <a href="https://dnedic.github.io/tags/esp-idf/">ESP-IDF</a>
+          
+            <a href="https://dnedic.github.io/tags/rust/">Rust</a>
+          
+        </span>
+      
+    </small>
+  </div>
+
+  <div>
+    <p>Historically, working on embedded software meant using proprietary manufacturer-provided IDEs with tools like the toolchain, build system and debugger all integrated.
+As open source tooling eventually caught up and even surpassed closed source solutions in many regards we often no longer have to rely on closed solutions and can adopt traditional software development tools and practices.</p>
+<p>Unfortunately, this means that our development environment suddenly relies on a number of tools that have to work together and be correctly set up on every developer's system.
+Keeping track of this can be a time-consuming process and issues can arise, including implicit tool dependencies and incompatibilities from tool version mismatches.</p>
+<p>In this post we will leverage the <a href="https://nixos.org/">Nix</a> package manager to create a shareable and reproducible development environment, take a look at advantages it offers over existing solutions and by the end of the post, you should be able to quickly spin up a development environment, share it in the form of a single text file and be sure everyone using it will have the same exact setup.</p>
+
+    <toc>
+      <h2>Table of contents:</h2>
+      <ul>
+      
+          <li>
+              <a href="https://dnedic.github.io/blog/nix-shell-embedded-development-environment/#our-example-project">Our example project</a>
+              
+          </li>
+      
+          <li>
+              <a href="https://dnedic.github.io/blog/nix-shell-embedded-development-environment/#challenges-of-manual-tool-management">Challenges of manual tool management</a>
+              
+                  <ul>
+                      
+                          <li>
+                              <a href="https://dnedic.github.io/blog/nix-shell-embedded-development-environment/#the-system-package-manager">The system package manager</a>
+                          </li>
+                      
+                          <li>
+                              <a href="https://dnedic.github.io/blog/nix-shell-embedded-development-environment/#obtaining-binary-releases">Obtaining binary releases</a>
+                          </li>
+                      
+                          <li>
+                              <a href="https://dnedic.github.io/blog/nix-shell-embedded-development-environment/#third-party-repositories">Third party repositories</a>
+                          </li>
+                      
+                          <li>
+                              <a href="https://dnedic.github.io/blog/nix-shell-embedded-development-environment/#universal-problems">Universal problems</a>
+                          </li>
+                      
+                  </ul>
+              
+          </li>
+      
+          <li>
+              <a href="https://dnedic.github.io/blog/nix-shell-embedded-development-environment/#docker">Docker</a>
+              
+                  <ul>
+                      
+                          <li>
+                              <a href="https://dnedic.github.io/blog/nix-shell-embedded-development-environment/#building-and-using-images">Building and using images</a>
+                          </li>
+                      
+                          <li>
+                              <a href="https://dnedic.github.io/blog/nix-shell-embedded-development-environment/#disadvantages-of-docker">Disadvantages of Docker</a>
+                          </li>
+                      
+                  </ul>
+              
+          </li>
+      
+          <li>
+              <a href="https://dnedic.github.io/blog/nix-shell-embedded-development-environment/#enter-nix">Enter Nix</a>
+              
+                  <ul>
+                      
+                          <li>
+                              <a href="https://dnedic.github.io/blog/nix-shell-embedded-development-environment/#nix-shell">nix-shell</a>
+                          </li>
+                      
+                          <li>
+                              <a href="https://dnedic.github.io/blog/nix-shell-embedded-development-environment/#version-pinning">Version pinning</a>
+                          </li>
+                      
+                          <li>
+                              <a href="https://dnedic.github.io/blog/nix-shell-embedded-development-environment/#using-overlays">Using overlays</a>
+                          </li>
+                      
+                          <li>
+                              <a href="https://dnedic.github.io/blog/nix-shell-embedded-development-environment/#third-party-tools">Third party tools</a>
+                          </li>
+                      
+                  </ul>
+              
+          </li>
+      
+          <li>
+              <a href="https://dnedic.github.io/blog/nix-shell-embedded-development-environment/#closing">Closing</a>
+              
+          </li>
+      
+      </ul>
+    </toc>
+<h2 id="our-example-project">Our example project</h2>
+<p>In <a href="/blog/the-most-thoroughly-commented-embedded-cmakelists/">the previous blogpost</a>, we explored setting up a <a href="https://github.com/DNedic/most_commented_embedded_cmakelists">simple CMake project</a> for an STM32 microcontroller using open source tooling.
+To build the project, we need a few tools:</p>
+<ul>
+<li>The <a href="https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads">ARM Embedded GCC toolchain</a> to compile and link the sources as well as bundle the standard library</li>
+<li><code>CMake</code> to generate our build system</li>
+<li><code>Make</code> or <code>Ninja</code> to run the generated build system</li>
+</ul>
+<p>Additionally, if we want to have a usable development environment, we need <code>git</code> for version control and <code>openocd</code> or another GDB server implementation for embedded in order to debug our firmware.</p>
+<h2 id="challenges-of-manual-tool-management">Challenges of manual tool management</h2>
+<p>There are a couple of ways to manually obtain the necessary tools for building the project, let's go through some of them.</p>
+<h3 id="the-system-package-manager">The system package manager</h3>
+<p>One thing we could do is use our system's package repositories, for instance on Arch Linux we would do:</p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#6c7079;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#eb6772;">sudo</span><span style="color:#abb2bf;"> pacman</span><span style="color:#eb6772;"> -Syu</span><span style="color:#abb2bf;"> cmake make git arm-none-eabi-gcc arm-none-eabi-binutils arm-none-eabi-newlib openocd
+</span></code></pre>
+<p>This is quite convenient as it only involves a single command and has ensured compatibility with our system.
+There are however quite a few hidden downsides with this approach:</p>
+<ul>
+<li>Different developers working on the same project could be using different systems, leading to mismatches in tool versions</li>
+<li>Developers could be updating their system at different times</li>
+<li>The tools we need could be missing from our systems repositories</li>
+</ul>
+<h3 id="obtaining-binary-releases">Obtaining binary releases</h3>
+<p>Alternatively, we could obtain binary releases of these tools. There is a bit more work involved with this approach, as we have to manually find, unpack and add all of these tools to our <code>PATH</code>. This process can quickly become time consuming with the number of machines we have to perform the procedure on. We could forget to update one and have the same exact version mismatch issues. Additionally, we no longer have ensured compatibility with the systems the developers are using due to fixed dependencies on python versions, glibc versions or system folder structure expectations.</p>
+<h3 id="third-party-repositories">Third party repositories</h3>
+<p>Finally, we can use third party repositories, like <a href="https://xpack.github.io/">xPack</a>'s <code>xpm</code>. This approach combines the benefits of the first two approaches, as we can still use a single command to install all of the tools and packagers try their best to ensure compatibility with all systems. We can observe however that some critical issues do not go away, like someone forgetting to update their packages.</p>
+<h3 id="universal-problems">Universal problems</h3>
+<p>On top of issues specific to one of these approaches, the manual approach to tool management requires meticulous checking for compatibility between tools themselves and their various versions working together, which can be a very time consuming process.</p>
+<p>To sum everything up, our development environments are not <strong>self-contained</strong>, <strong>reproducible</strong> or <strong>managed</strong>.</p>
+<h2 id="docker">Docker</h2>
+<p>The most popular tool to deal with these issues at the moment is <a href="https://www.docker.com/">Docker</a>.
+Docker is a container runtime, created to run lightweight isolated environments in some ways akin to virtual machines on top of our system.
+What this means for us is that we can create images which will hold all of our tools and can be used to build and debug our project.</p>
+<h3 id="building-and-using-images">Building and using images</h3>
+<p>Let's take a look at a minimal image recipe required to build our project in the form of a <code>Dockerfile</code>:</p>
+<pre data-lang="Dockerfile" style="background-color:#2b303b;color:#6c7079;" class="language-Dockerfile "><code class="language-Dockerfile" data-lang="Dockerfile"><span style="font-style:italic;color:#5f697a;"># Choose a base image
+</span><span style="color:#cd74e8;">FROM</span><span style="color:#abb2bf;"> ubuntu:23.04
+</span><span style="color:#abb2bf;">
+</span><span style="font-style:italic;color:#5f697a;"># Refresh the package index
+</span><span style="color:#cd74e8;">RUN </span><span style="color:#abb2bf;">apt-get -qq update
+</span><span style="color:#abb2bf;">
+</span><span style="font-style:italic;color:#5f697a;"># Get the required packages
+</span><span style="color:#cd74e8;">RUN </span><span style="color:#abb2bf;">apt-get -y install cmake make git gcc-arm-none-eabi binutils-arm-none-eabi libnewlib-arm-none-eabi
+</span><span style="color:#abb2bf;">
+</span><span style="font-style:italic;color:#5f697a;"># Specify the working directory inside the container
+</span><span style="color:#cd74e8;">WORKDIR </span><span style="color:#abb2bf;">/usr/project
+</span></code></pre>
+<p>To build our image and give it a name, we can run:</p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#6c7079;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#eb6772;">docker</span><span style="color:#abb2bf;"> build</span><span style="color:#eb6772;"> -t</span><span style="color:#abb2bf;"> most_commented_embedded_cmakelists .
+</span></code></pre>
+<p>And to enter an interactive shell inside the container built from our image, we can use this command:</p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#6c7079;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#eb6772;">docker</span><span style="color:#abb2bf;"> run</span><span style="color:#eb6772;"> -v </span><span style="color:#abb2bf;">$(</span><span style="color:#eb6772;">pwd</span><span style="color:#abb2bf;">):/usr/project</span><span style="color:#eb6772;"> -it</span><span style="color:#abb2bf;"> most_commented_embedded_cmakelists
+</span></code></pre>
+<p>Where the <code>-v</code> argument maps our current working directory to the containers <code>/usr/project</code> directory and <code>-it</code> runs the container in the interactive mode.</p>
+<p>In order to be able to debug our project, we have to add <code>openocd</code> and any debugger drivers to the list of packages:</p>
+<pre data-lang="Dockerfile" style="background-color:#2b303b;color:#6c7079;" class="language-Dockerfile "><code class="language-Dockerfile" data-lang="Dockerfile"><span style="color:#abb2bf;">RUN apt-get -y install openocd libusb-1.0-0
+</span></code></pre>
+<p>then pass all usb devices through to the container every time we run it:</p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#6c7079;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#eb6772;">docker</span><span style="color:#abb2bf;"> run</span><span style="color:#eb6772;"> -v </span><span style="color:#abb2bf;">$(</span><span style="color:#eb6772;">pwd</span><span style="color:#abb2bf;">):/usr/project</span><span style="color:#eb6772;"> -v</span><span style="color:#abb2bf;"> /dev/bus/usb:/dev/bus/usb</span><span style="color:#eb6772;"> --privileged -it</span><span style="color:#abb2bf;"> most_commented_embedded_cmakelists
+</span></code></pre>
+<h3 id="disadvantages-of-docker">Disadvantages of Docker</h3>
+<p>Those observant enough have probably noticed a few downsides of this approach along the way.</p>
+<p>One major issue is that Docker images are not reproducible - the <code>apt-get</code> command in the <code>Dockerfile</code> gets the latest versions of the packages from the chosen base image repositories.
+This means that any time we run it, we may get different versions of packages.
+To combat this, we have to share images themselves, which can be rather large - the minimal image required to build our project alone is <code>2.9GB</code>.
+As an individual, we can upload these to <a href="https://hub.docker.com/">Dockerhub</a> with an account, however businesses will have to pay a subscription for hosting these.</p>
+<p>Another issue is that we don't have access to our system's shell - our aliases, shell settings and more are not available to us in Docker images.</p>
+<p>Finally, it's easy to see that Docker commands can get very unwieldy due to the number of things we have to pass through to the container.</p>
+<h2 id="enter-nix">Enter Nix</h2>
+<p>The Nix package manager released over 20 years ago but has recently caught the programming community spotlight with its ability to solve the dependency hell issues, work together with <a href="https://nixos.org/">NixOS</a> to create reproducible Linux machines as well as create reproducible development environments.</p>
+<h3 id="nix-shell">nix-shell</h3>
+<p>For this blogpost, we will be utilizing the <a href="https://nixos.org/manual/nix/stable/command-ref/nix-shell.html">nix-shell</a> command provided by the Nix package manager.
+Using nix-shell, you can:</p>
+<ol>
+<li>Create temporary environments for development, experimentation, or debugging without affecting your main system.</li>
+<li>Share these environments with others in the form of a simple text file, ensuring everyone is on the same page.</li>
+</ol>
+<p>A <code>nix-shell</code> environment is usually defined with a <code>shell.nix</code> or a <code>default.nix</code> file containing a Nix language expression.
+Here's a basic example of what a <code>shell.nix</code> file might look like for our embedded project:</p>
+<pre data-lang="nix" style="background-color:#2b303b;color:#6c7079;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#cd74e8;">let </span><span style="color:#db9d63;">pkgs </span><span style="color:#adb7c9;">= </span><span style="color:#5ebfcc;">import </span><span style="color:#9acc76;">&lt;nixpkgs&gt; </span><span style="color:#abb2bf;">{};
+</span><span style="color:#abb2bf;">
+</span><span style="color:#cd74e8;">in </span><span style="color:#eb6772;">pkgs</span><span style="color:#adb7c9;">.</span><span style="color:#eb6772;">mkShell </span><span style="color:#abb2bf;">{
+</span><span style="color:#abb2bf;">  </span><span style="color:#db9d63;">packages </span><span style="color:#adb7c9;">= </span><span style="color:#abb2bf;">[
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">pkgs</span><span style="color:#adb7c9;">.</span><span style="color:#eb6772;">gcc-arm-embedded
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">pkgs</span><span style="color:#adb7c9;">.</span><span style="color:#eb6772;">cmake
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">pkgs</span><span style="color:#adb7c9;">.</span><span style="color:#eb6772;">gnumake
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">pkgs</span><span style="color:#adb7c9;">.</span><span style="color:#eb6772;">git
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">pkgs</span><span style="color:#adb7c9;">.</span><span style="color:#eb6772;">openocd
+</span><span style="color:#abb2bf;">  ];
+</span><span style="color:#abb2bf;">}
+</span></code></pre>
+<p>By running <code>nix-shell</code> inside our project directory, the Nix package manager will download specified packages from the Nix repositories along with their dependencies and place them in <code>/nix/store</code> and then export the executables of these packages to our shells <code>PATH</code>.</p>
+<p>We can easily check this by running <code>which</code> on one of our tools:</p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#6c7079;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#eb6772;">which</span><span style="color:#abb2bf;"> arm-none-eabi-gcc
+</span><span style="color:#eb6772;">/nix/store/im3iiikm684j0dn166k78japxlknsrki-gcc-arm-embedded-12.2.rel1/bin/arm-none-eabi-gcc
+</span></code></pre>
+<p>We can also run <code>nix-shell</code> with the <code>--pure</code> argument in order to verify that all of our tools are present and that building or debugging the project isn't using our system's tools by accident.
+This removes almost everything from our PATH before evaluating <code>nix-shell</code>.</p>
+<p>Additionally, if we want to execute any commands in the shell on entry, we can use the <code>shellHook</code> argument of <code>mkShell</code>:</p>
+<pre data-lang="nix" style="background-color:#2b303b;color:#6c7079;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#eb6772;">pkgs</span><span style="color:#adb7c9;">.</span><span style="color:#eb6772;">mkShell </span><span style="color:#abb2bf;">{
+</span><span style="color:#abb2bf;">  </span><span style="font-style:italic;color:#5f697a;"># --snip--
+</span><span style="color:#abb2bf;">  </span><span style="color:#db9d63;">shellHook </span><span style="color:#adb7c9;">= </span><span style="color:#9acc76;">&quot;echo </span><span style="color:#5ebfcc;">\&quot;</span><span style="color:#9acc76;">Hello from our shell</span><span style="color:#5ebfcc;">\&quot;</span><span style="color:#9acc76;">&quot;</span><span style="color:#abb2bf;">;
+</span><span style="color:#abb2bf;">}
+</span></code></pre>
+<p>This can be useful if we want to start a server to talk to our device or automatically build the project upon entry.</p>
+<h3 id="version-pinning">Version pinning</h3>
+<p>With this configuration, package versions can change every time we run <code>nix-shell</code> depending on the package versions in the <code>nixpkgs</code> collection however.
+To get true reproducibility, we have to somehow specify the package versions.</p>
+<p>Usually, this is done by pinning <code>nixpkgs</code> to a specific point in time.
+This can be done in one of the following ways:</p>
+<ul>
+<li>By using <code>builtins.fetchTarball</code> and specifying the <code>nixpkgs</code> tarball</li>
+</ul>
+<pre data-lang="nix" style="background-color:#2b303b;color:#6c7079;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#cd74e8;">let </span><span style="color:#db9d63;">pkgs </span><span style="color:#adb7c9;">= </span><span style="color:#5ebfcc;">import </span><span style="color:#abb2bf;">(</span><span style="color:#db9d63;">builtins</span><span style="color:#adb7c9;">.</span><span style="color:#eb6772;">fetchTarball </span><span style="color:#abb2bf;">{
+</span><span style="color:#abb2bf;">  </span><span style="color:#db9d63;">url </span><span style="color:#adb7c9;">= </span><span style="color:#9acc76;">&quot;https://github.com/NixOS/nixpkgs/archive/976fa3369d722e76f37c77493d99829540d43845.tar.gz&quot;</span><span style="color:#abb2bf;">;
+</span><span style="color:#abb2bf;">}) {};
+</span></code></pre>
+<ul>
+<li>By using <code>builtins.fetchGit</code> and specifying a git revision</li>
+</ul>
+<pre data-lang="nix" style="background-color:#2b303b;color:#6c7079;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#cd74e8;">let </span><span style="color:#db9d63;">pkgs </span><span style="color:#adb7c9;">= </span><span style="color:#5ebfcc;">import </span><span style="color:#abb2bf;">(</span><span style="color:#db9d63;">builtins</span><span style="color:#adb7c9;">.</span><span style="color:#eb6772;">fetchGit </span><span style="color:#abb2bf;">{
+</span><span style="color:#abb2bf;">  </span><span style="color:#db9d63;">url </span><span style="color:#adb7c9;">= </span><span style="color:#9acc76;">&quot;https://github.com/nixos/nixpkgs/&quot;</span><span style="color:#abb2bf;">;
+</span><span style="color:#abb2bf;">  </span><span style="color:#db9d63;">ref </span><span style="color:#adb7c9;">= </span><span style="color:#9acc76;">&quot;refs/heads/nixos-unstable&quot;</span><span style="color:#abb2bf;">;
+</span><span style="color:#abb2bf;">  </span><span style="color:#db9d63;">rev </span><span style="color:#adb7c9;">= </span><span style="color:#9acc76;">&quot;976fa3369d722e76f37c77493d99829540d43845&quot;</span><span style="color:#abb2bf;">;
+</span><span style="color:#abb2bf;">}) {};
+</span></code></pre>
+<p>While Nix itself does not provide an easy way to obtain these arguments based on the package versions we need the <a href="https://lazamar.co.uk/nix-versions/">nix-versions</a> website can be used to obtain them and even generate code blocks shown above.</p>
+<blockquote>
+<p><strong>Note:</strong> It is possible that <code>mkShell</code> will fail when going too far back in time with <code>nixpkgs</code> versions. This is because <code>mkShell</code> was introduced in 2018 as a convenience wrapper around <code>stdenv.mkDerivation</code> for <code>nix-shell</code> purposes. Here is how we would achieve the same result using <code>stdenv.mkDerivation</code>:</p>
+<pre data-lang="nix" style="background-color:#2b303b;color:#6c7079;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#eb6772;">pkgs</span><span style="color:#adb7c9;">.</span><span style="color:#eb6772;">stdenv</span><span style="color:#adb7c9;">.</span><span style="color:#eb6772;">mkDerivation </span><span style="color:#abb2bf;">{
+</span><span style="color:#abb2bf;">  </span><span style="color:#db9d63;">name </span><span style="color:#adb7c9;">= </span><span style="color:#9acc76;">&quot;my-shell&quot;</span><span style="color:#abb2bf;">;
+</span><span style="color:#abb2bf;">  </span><span style="color:#db9d63;">buildInputs </span><span style="color:#adb7c9;">= </span><span style="color:#abb2bf;">[
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">pkgs</span><span style="color:#adb7c9;">.</span><span style="color:#eb6772;">gcc-arm-embedded
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">pkgs</span><span style="color:#adb7c9;">.</span><span style="color:#eb6772;">cmake
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">pkgs</span><span style="color:#adb7c9;">.</span><span style="color:#eb6772;">gnumake
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">pkgs</span><span style="color:#adb7c9;">.</span><span style="color:#eb6772;">git
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">pkgs</span><span style="color:#adb7c9;">.</span><span style="color:#eb6772;">openocd
+</span><span style="color:#abb2bf;">  ];
+</span><span style="color:#abb2bf;">}
+</span></code></pre>
+</blockquote>
+<p>If however the nixpkgs revision for one package does not provide the desired version of another package, it is possible to import multiple <code>nixpkgs</code> revisions like so:</p>
+<pre data-lang="nix" style="background-color:#2b303b;color:#6c7079;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#cd74e8;">let
+</span><span style="color:#abb2bf;">  </span><span style="color:#db9d63;">pkgs </span><span style="color:#adb7c9;">= </span><span style="color:#5ebfcc;">import </span><span style="color:#abb2bf;">(</span><span style="color:#db9d63;">builtins</span><span style="color:#adb7c9;">.</span><span style="color:#eb6772;">fetchTarball </span><span style="color:#abb2bf;">{
+</span><span style="color:#abb2bf;">    </span><span style="color:#db9d63;">url </span><span style="color:#adb7c9;">= </span><span style="color:#9acc76;">&quot;https://github.com/NixOS/nixpkgs/archive/976fa3369d722e76f37c77493d99829540d43845.tar.gz&quot;</span><span style="color:#abb2bf;">;
+</span><span style="color:#abb2bf;">  }) {};
+</span><span style="color:#abb2bf;">  </span><span style="color:#db9d63;">pkgs_arm_gcc </span><span style="color:#adb7c9;">= </span><span style="color:#5ebfcc;">import </span><span style="color:#abb2bf;">(</span><span style="color:#db9d63;">builtins</span><span style="color:#adb7c9;">.</span><span style="color:#eb6772;">fetchTarball </span><span style="color:#abb2bf;">{
+</span><span style="color:#abb2bf;">    </span><span style="color:#db9d63;">url </span><span style="color:#adb7c9;">= </span><span style="color:#9acc76;">&quot;https://github.com/NixOS/nixpkgs/archive/b0f0b5c6c021ebafbd322899aa9a54b87d75a313.tar.gz&quot;</span><span style="color:#abb2bf;">;
+</span><span style="color:#abb2bf;">  }) {};
+</span><span style="color:#abb2bf;">
+</span><span style="color:#abb2bf;">
+</span><span style="color:#cd74e8;">in </span><span style="color:#eb6772;">pkgs</span><span style="color:#adb7c9;">.</span><span style="color:#eb6772;">mkShell </span><span style="color:#abb2bf;">{
+</span><span style="color:#abb2bf;">  </span><span style="color:#db9d63;">packages </span><span style="color:#adb7c9;">= </span><span style="color:#abb2bf;">[
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">pkgs_arm_gcc</span><span style="color:#adb7c9;">.</span><span style="color:#eb6772;">gcc-arm-embedded
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">pkgs</span><span style="color:#adb7c9;">.</span><span style="color:#eb6772;">cmake
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">pkgs</span><span style="color:#adb7c9;">.</span><span style="color:#eb6772;">gnumake
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">pkgs</span><span style="color:#adb7c9;">.</span><span style="color:#eb6772;">git
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">pkgs</span><span style="color:#adb7c9;">.</span><span style="color:#eb6772;">openocd
+</span><span style="color:#abb2bf;">  ];
+</span><span style="color:#abb2bf;">}
+</span></code></pre>
+<p>With this, we have a fully reproducible and managed embedded development environment!
+This means that we can <strong>treat our development environment as code</strong> and anyone pulling our repository can instantly obtain the same environment we had when developing or deploying the project.</p>
+<h3 id="using-overlays">Using overlays</h3>
+<p>Our example project so far required a relatively small number of tools compared to some manufacturer SDKs which can bundle a large number of tools and dependencies.
+An example of such an SDK would be <a href="https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/">ESP-IDF</a> from Espressif, which has a host of toolchains, python tools and dependencies.
+In situations like this, we may not want to manually specify our development environment, but instead rely on manufacturer or community maintained solutions and build on top of them.</p>
+<p><a href="https://github.com/mirrexagon/nixpkgs-esp-dev">nixpkgs-esp-dev</a> offers such a solution for ESP-IDF, and looking at the code you will quickly realize the futility of maintaining such a solution yourself.
+To demonstrate the power of <code>nixpkgs-esp-dev</code> we will use the <a href="https://github.com/espressif/esp-usb-bridge">esp-usb-bridge</a> project as an example.
+<code>esp-usb-bridge</code> lets you create your own programmer and <code>JTAG</code> probe with an <code>ESP32-S2</code> or <code>ESP32-S3</code> based board.</p>
+<p>After pulling the project, we can create a <code>shell.nix</code> file according to the <code>nixpkgs-esp-dev</code> instructions and pin the ESP-IDF version:</p>
+<pre data-lang="nix" style="background-color:#2b303b;color:#6c7079;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#cd74e8;">let
+</span><span style="color:#abb2bf;">  </span><span style="color:#db9d63;">nixpkgs-esp-dev </span><span style="color:#adb7c9;">= </span><span style="color:#db9d63;">builtins</span><span style="color:#adb7c9;">.</span><span style="color:#eb6772;">fetchGit </span><span style="color:#abb2bf;">{
+</span><span style="color:#abb2bf;">    </span><span style="color:#db9d63;">url </span><span style="color:#adb7c9;">= </span><span style="color:#9acc76;">&quot;https://github.com/mirrexagon/nixpkgs-esp-dev.git&quot;</span><span style="color:#abb2bf;">;
+</span><span style="color:#abb2bf;">    </span><span style="color:#db9d63;">rev </span><span style="color:#adb7c9;">= </span><span style="color:#9acc76;">&quot;4cc9ec3f8e992ed15924672192a2ce5fb0223121&quot;</span><span style="color:#abb2bf;">;
+</span><span style="color:#abb2bf;">  };
+</span><span style="color:#abb2bf;">
+</span><span style="color:#abb2bf;">  </span><span style="color:#db9d63;">pkgs </span><span style="color:#adb7c9;">= </span><span style="color:#5ebfcc;">import </span><span style="color:#9acc76;">&lt;nixpkgs&gt; </span><span style="color:#abb2bf;">{
+</span><span style="color:#abb2bf;">    </span><span style="color:#db9d63;">overlays </span><span style="color:#adb7c9;">= </span><span style="color:#abb2bf;">[ (</span><span style="color:#5ebfcc;">import </span><span style="color:#9acc76;">&quot;</span><span style="color:#c94e42;">${</span><span style="color:#eb6772;">nixpkgs-esp-dev</span><span style="color:#c94e42;">}</span><span style="color:#9acc76;">/overlay.nix&quot;</span><span style="color:#abb2bf;">) ];
+</span><span style="color:#abb2bf;">  };
+</span><span style="color:#abb2bf;">
+</span><span style="color:#cd74e8;">in </span><span style="color:#eb6772;">pkgs</span><span style="color:#adb7c9;">.</span><span style="color:#eb6772;">mkShell </span><span style="color:#abb2bf;">{
+</span><span style="color:#abb2bf;">  </span><span style="color:#db9d63;">packages </span><span style="color:#adb7c9;">= </span><span style="color:#abb2bf;">[
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">pkgs</span><span style="color:#adb7c9;">.</span><span style="color:#eb6772;">esp-idf-full
+</span><span style="color:#abb2bf;">  ];
+</span><span style="color:#abb2bf;">}
+</span></code></pre>
+<p>From this point, we can build, flash and debug the project and continue expanding our new development environment with any new requirements we have by extending the <code>shell.nix</code> file.</p>
+<p>Another such example is the <a href="https://github.com/oxalica/rust-overlay">rust-overlay</a> which lets you manage rust channels and architectures easily.</p>
+<p>These examples show us an important aspect of Nix - composability, we can import another <code>.nix</code> file and use it as an expression.
+The <code>overlay</code> argument lets us customize the <code>nixpkgs</code> collection by overriding packages or introducing new ones.
+There are many community maintained overlays, which can also be combined to save you the effort of maintaining huge environments.</p>
+<h3 id="third-party-tools">Third party tools</h3>
+<p>Finally, there are quite a few projects built on top of <code>nix-shell</code> that offer user convenience.</p>
+<ul>
+<li>
+<p><a href="https://github.com/nix-community/lorri">lorri</a> for instance offers automatic <code>nix-shell</code> invocation upon entering a project's directory providing seamless development, enables downloading newer package versions while in the shell itself and gives you tools to prevent the Nix garbage collector from sweeping away your <code>nix-shell</code> obtained tools when invoked.</p>
+</li>
+<li>
+<p>Another useful third party tool is <a href="https://www.jetpack.io/devbox">devbox</a> which offers a convenient wrapper around <code>nix-shell</code> and lets you forego the Nix language entirely, specifying your development environment in JSON. It also makes package pinning much more elegant and has a plugin system.</p>
+</li>
+<li>
+<p>For those using VSCode, <a href="https://marketplace.visualstudio.com/items?itemName=arrterian.nix-env-selector">Nix Environment Selector</a> provides an elegant way to run your entire VSCode instance in the <code>nix-shell</code> environment.</p>
+</li>
+</ul>
+<h2 id="closing">Closing</h2>
+<p>In this blogpost we covered some of the biggest challenges encountered by developers when switching to open tooling development environments, explored state of the art solutions and where they falter and then introduced <code>nix-shell</code> as a viable alternative.</p>
+<p>At this point you should be ready to give <code>nix-shell</code> a shot the next time you're required to manage an embedded development environment and save yourself and your team from the pains of manual tool management.</p>
+<p>For further reading you might be interested in reading about <a href="https://interrupt.memfault.com/blog/reproducible-firmware-builds">providing reproducible firmware builds</a> for your customers or partners, which Nix takes you a long way to or exploring <a href="https://www.tweag.io/blog/2020-05-25-flakes/">Nix flakes</a> as a newer, experimental way to achieve the same goals.</p>
+
+  </div>
+
+  <hr class="footer-rule" />
+
+  
+    <div class="footer-about">
+      <p>© 2026 - Djordje Nedic | Find me on <a href="https://www.linkedin.com/in/djordje-nedic/">LinkedIn</a> or <a href="https://github.com/DNedic">GitHub</a></p>
+
+    </div>
+  
+
+  <div class="related-container">
+
+    
+
+    
+
+  </div>
+
+
+    </main>
+    <footer class="footer-page">
+    
+      
+    
+    </footer>
+    <script defer src="https://dnedic.github.io/responsive-code.js"></script>
+  </body>
+</html>

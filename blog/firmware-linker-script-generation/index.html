@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="x-ua-compatible" content="ie=edge" />
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+
+   <style>
+      :root {
+        --accent-color: #007ea7;
+        --accent-color-light: #007ea7;
+        --accent-color-2: #F2545B;
+        --accent-overlay-color: #FEFEFF;
+        --body-bg: #FEFEFF;
+        --body-color: #2E2F2F;
+        --heading-color: #2E2F2F;
+        --table-bg-even: #f3f3f3;
+        --table-border-bottom: #dddddd;
+      }
+      
+    </style>
+
+    <meta name="theme-color" content="#007ea7" />
+
+    
+      <link rel="icon" href="https:&#x2F;&#x2F;dnedic.github.io&#x2F;processed_images&#x2F;profile_small.0c7adb3698cde8cd.jpg" />
+      <link rel="apple-touch-icon" sizes="48x48" href="https:&#x2F;&#x2F;dnedic.github.io&#x2F;processed_images&#x2F;profile_small.0c7adb3698cde8cd.jpg" />
+      <link rel="apple-touch-icon" sizes="72x72" href="https:&#x2F;&#x2F;dnedic.github.io&#x2F;processed_images&#x2F;profile_small.217830fedc41980c.jpg" />
+      <link rel="apple-touch-icon" sizes="96x96" href="https:&#x2F;&#x2F;dnedic.github.io&#x2F;processed_images&#x2F;profile_small.0e4140f00554bdce.jpg" />
+      <link rel="apple-touch-icon" sizes="144x144" href="https:&#x2F;&#x2F;dnedic.github.io&#x2F;processed_images&#x2F;profile_small.4f4b1a8b2004f3cf.jpg" />
+      <link rel="apple-touch-icon" sizes="192x192" href="https:&#x2F;&#x2F;dnedic.github.io&#x2F;processed_images&#x2F;profile_small.0cd4efe546c1e873.jpg" />
+      <link rel="apple-touch-icon" sizes="256x256" href="https:&#x2F;&#x2F;dnedic.github.io&#x2F;processed_images&#x2F;profile_small.8d43f2a015690d0e.jpg" />
+      <link rel="apple-touch-icon" sizes="384x384" href="https:&#x2F;&#x2F;dnedic.github.io&#x2F;processed_images&#x2F;profile_small.8856056bad7b061d.jpg" />
+      <link rel="apple-touch-icon" sizes="512x512" href="https:&#x2F;&#x2F;dnedic.github.io&#x2F;processed_images&#x2F;profile_small.9e2861538193562f.jpg" />
+      
+    
+
+    
+
+    <link rel="canonical" href="https://dnedic.github.io/blog/firmware-linker-script-generation">
+
+    <meta name="robots" content="index, follow">
+
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Linker Script Generation for Firmware Projects: A Primer">
+    <meta property="og:url" content="https://dnedic.github.io/blog/firmware-linker-script-generation">
+
+    <meta name="twitter:card" content="summary">
+
+    
+
+    
+
+    
+      
+        <meta name="description" content="" />
+        <meta name="twitter:description" content="">
+        <meta name="og:description" content="">
+      
+    
+
+    
+      <meta name="twitter:title" content="Linker Script Generation for Firmware Projects: A Primer">
+    
+
+    
+      <link rel="prerender" href="&#x2F;blog&#x2F;" />
+    
+
+    <link rel="prefetch" href="https:&#x2F;&#x2F;dnedic.github.io&#x2F;processed_images&#x2F;profile_small.a00a785a6bbff823.jpg" />
+
+    <title>
+      
+        
+          Linker Script Generation for Firmware Projects: A Primer
+        
+      
+    </title>
+
+    
+
+
+    
+      <link rel="stylesheet" href="https://dnedic.github.io/main.css">
+    
+    
+  
+
+  
+
+  
+    <link rel="prerender"  href="https://dnedic.github.io/tags/linker-script/">
+  
+    <link rel="prerender"  href="https://dnedic.github.io/tags/embedded/">
+  
+    <link rel="prerender"  href="https://dnedic.github.io/tags/cmake/">
+  
+    <link rel="prerender"  href="https://dnedic.github.io/tags/stm32/">
+  
+    <link rel="prerender"  href="https://dnedic.github.io/tags/zephyr/">
+  
+    <link rel="prerender"  href="https://dnedic.github.io/tags/esp-idf/">
+  
+
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "NewsArticle",
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://google.com/article"
+      },
+      "headline": "Linker Script Generation for Firmware Projects: A Primer",
+      "image": [],
+      "datePublished": "2026-02-08T00:00:00+00:00",
+      "dateModified": "2026-02-08T00:00:00+00:00"
+    }
+  </script>
+
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        
+
+        
+        {
+          
+          "@type": "ListItem",
+          "position": 1,
+          "name": "",
+          "item": "https://dnedic.github.io/"
+        },
+        
+        {
+          
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Djordje Nedic | Blog",
+          "item": "https://dnedic.github.io/blog/"
+        },
+        
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "Linker Script Generation for Firmware Projects: A Primer",
+          "item": "https://dnedic.github.io/blog/firmware-linker-script-generation/"
+        }
+      ]
+    }
+  </script>
+
+  </head>
+  <body>
+    
+      <header>
+        <a class="profile-icon" href="/">
+          <img src="https:&#x2F;&#x2F;dnedic.github.io&#x2F;processed_images&#x2F;profile_small.a00a785a6bbff823.jpg" alt="profile picture">
+        </a>
+        <nav>
+          
+            <a href="&#x2F;blog&#x2F;">Blog</a>
+          
+        </nav>
+      </header>
+    
+    <main>
+    
+  <div class="post-title">
+    <h1>Linker Script Generation for Firmware Projects: A Primer</h1>
+    <small>
+      February 08, 2026
+      
+        -
+        <span class="tags">
+          
+            <a href="https://dnedic.github.io/tags/linker-script/">Linker script</a>
+          
+            <a href="https://dnedic.github.io/tags/embedded/">Embedded</a>
+          
+            <a href="https://dnedic.github.io/tags/cmake/">CMake</a>
+          
+            <a href="https://dnedic.github.io/tags/stm32/">STM32</a>
+          
+            <a href="https://dnedic.github.io/tags/zephyr/">Zephyr</a>
+          
+            <a href="https://dnedic.github.io/tags/esp-idf/">ESP-IDF</a>
+          
+        </span>
+      
+    </small>
+  </div>
+
+  <div>
+    <p>If you've worked on firmware for any length of time, chances are you had to modify or write a linker script at some point.
+The core principles are pretty straightforward - define memory regions, place sections inside, respect alignment requirements, define a few symbols and you're good to go.</p>
+<p>While this is enough initially, projects can grow unpredictably.
+At some point you might need to add support for multiple chips or different external memories.
+Maybe you end up needing support for different bootloaders?
+Perhaps you might want to load the code into RAM directly for debugging purposes?
+Before you know it, these variations pile up, and suddenly you’re juggling a bunch of nearly identical linker scripts you have to keep in sync, which becomes tedious and error-prone.</p>
+<p>In this article, we'll talk about how this happens and dive into a practical example that shows how to keep linker scripts manageable as firmware projects grow.</p>
+<blockquote>
+<p><strong>Note:</strong> If it’s been a while since you last tinkered with linker scripts, check out <a href="https://mcyoung.xyz/2021/06/01/linker-script/">this great blogpost</a> and the <a href="https://sourceware.org/binutils/docs/ld/Scripts.html">official GNU documentation</a></p>
+</blockquote>
+
+    <toc>
+      <h2>Table of contents:</h2>
+      <ul>
+      
+          <li>
+              <a href="https://dnedic.github.io/blog/firmware-linker-script-generation/#why-variants-break-linker-scripts">Why variants break linker scripts</a>
+              
+          </li>
+      
+          <li>
+              <a href="https://dnedic.github.io/blog/firmware-linker-script-generation/#building-the-mental-framework">Building the mental framework</a>
+              
+          </li>
+      
+          <li>
+              <a href="https://dnedic.github.io/blog/firmware-linker-script-generation/#a-minimal-example-project">A minimal example project</a>
+              
+          </li>
+      
+          <li>
+              <a href="https://dnedic.github.io/blog/firmware-linker-script-generation/#turning-the-linker-script-into-a-template">Turning the linker script into a template</a>
+              
+          </li>
+      
+          <li>
+              <a href="https://dnedic.github.io/blog/firmware-linker-script-generation/#adding-options">Adding options</a>
+              
+          </li>
+      
+          <li>
+              <a href="https://dnedic.github.io/blog/firmware-linker-script-generation/#letting-your-imagination-run-wild">Letting your imagination run wild</a>
+              
+          </li>
+      
+          <li>
+              <a href="https://dnedic.github.io/blog/firmware-linker-script-generation/#real-world-examples">Real-world examples</a>
+              
+          </li>
+      
+          <li>
+              <a href="https://dnedic.github.io/blog/firmware-linker-script-generation/#closing">Closing</a>
+              
+          </li>
+      
+      </ul>
+    </toc>
+<h2 id="why-variants-break-linker-scripts">Why variants break linker scripts</h2>
+<p>Consider a common scenario:</p>
+<ul>
+<li>
+<p>You start developing a product using a single chip and a straightforward memory layout. At this stage, your linker script is simple, easy to maintain, and just does what it needs to do.</p>
+</li>
+<li>
+<p>Later, the original chip becomes hard to source, so you add support for a pin-compatible replacement with more flash and RAM.
+To accommodate both chips, you copy the original linker script, changing only the region sizes.</p>
+</li>
+<li>
+<p>Next, you decide to add optional bootloader support for devices that can update over the air.
+This introduces another layer of variation: each chip can be built with or without the bootloader, doubling the number of linker scripts.</p>
+</li>
+<li>
+<p>Finally, a new variant of your product includes an LCD and requires external memory for bitmaps. Now you’re managing eight linker script variants across different configurations!</p>
+</li>
+</ul>
+<p>This illustrates why linker scripts can become hard to maintain: each change has to be duplicated across all variations with some falling out of sync over time, making it harder to tell if changes are intentional or not.
+To stay in control, we have to find a way to approach them like other software: <strong>factor out the parts that stay the same, and only configure the parts that change</strong>.</p>
+<h2 id="building-the-mental-framework">Building the mental framework</h2>
+<p>Let’s take a step back and figure out what really changes and what usually stays the same.</p>
+<p>No matter what we do, the linker needs a valid script at the end of the day.
+That means the overall structure, syntax, and required sections are mostly fixed: we'll always have a <code>.text</code> section, a <code>.data</code> section, and certain architecture-specific details like alignment rules or symbol definitions.
+We could use these to create a <strong>template</strong>, which we can then fill out with configurable parts, such as</p>
+<ul>
+<li>memory properties</li>
+<li>section region mappings</li>
+<li>reservations for optional features</li>
+</ul>
+<p>As an example, the memory region part of the linker script template could look like this:</p>
+<pre data-lang="ld" style="background-color:#2b303b;color:#6c7079;" class="language-ld "><code class="language-ld" data-lang="ld"><span style="color:#cd74e8;">MEMORY</span><span style="color:#abb2bf;"> {
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">FLASH</span><span style="color:#abb2bf;"> (</span><span style="color:#eb6772;">rx</span><span style="color:#abb2bf;">) : </span><span style="color:#cd74e8;">ORIGIN</span><span style="color:#abb2bf;"> = ${</span><span style="color:#eb6772;">flash_start</span><span style="color:#abb2bf;">}, </span><span style="color:#cd74e8;">LENGTH</span><span style="color:#abb2bf;"> = ${</span><span style="color:#eb6772;">flash_size</span><span style="color:#abb2bf;">}
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">RAM</span><span style="color:#abb2bf;">   (</span><span style="color:#eb6772;">rwx</span><span style="color:#abb2bf;">): </span><span style="color:#cd74e8;">ORIGIN</span><span style="color:#abb2bf;"> = ${</span><span style="color:#eb6772;">ram_start</span><span style="color:#abb2bf;">},   </span><span style="color:#cd74e8;">LENGTH</span><span style="color:#abb2bf;"> = ${</span><span style="color:#eb6772;">ram_size</span><span style="color:#abb2bf;">}
+</span><span style="color:#abb2bf;">}
+</span></code></pre>
+<p>Then, we can store the changing values in the build system itself or in separate YAML/JSON files and somehow <strong>generate</strong> the final linker script by combining them with the template.
+The output will still be a normal <code>.ld</code> file - the linker should never see the template or the configuration.</p>
+<h2 id="a-minimal-example-project">A minimal example project</h2>
+<p>Let’s look at a concrete example to see how all this works in practice.
+We’ll start from a <a href="https://github.com/DNedic/most_commented_embedded_cmakelists">simple CMake firmware project</a> for an STM32 microcontroller.
+For the impatient, the end result lives on the <a href="https://github.com/DNedic/most_commented_embedded_cmakelists/tree/linker_script_generation">linker_script_generation branch</a>.</p>
+<p>For demonstration purposes, we will set aside the STM32CubeMX-provided linker script and use the simplest linker script that can still build and run the project correctly:</p>
+<pre data-lang="ld" style="background-color:#2b303b;color:#6c7079;" class="language-ld "><code class="language-ld" data-lang="ld"><span style="color:#cd74e8;">ENTRY</span><span style="color:#abb2bf;">(</span><span style="color:#eb6772;">Reset_Handler</span><span style="color:#abb2bf;">)
+</span><span style="color:#abb2bf;">
+</span><span style="color:#cd74e8;">MEMORY
+</span><span style="color:#abb2bf;">{
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">RAM</span><span style="color:#abb2bf;"> (</span><span style="color:#eb6772;">xrw</span><span style="color:#abb2bf;">)  : </span><span style="color:#cd74e8;">ORIGIN</span><span style="color:#abb2bf;"> = </span><span style="color:#db9d63;">0x20000000</span><span style="color:#abb2bf;">, </span><span style="color:#cd74e8;">LENGTH</span><span style="color:#abb2bf;"> = </span><span style="color:#db9d63;">20K
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">FLASH</span><span style="color:#abb2bf;"> (</span><span style="color:#eb6772;">rx</span><span style="color:#abb2bf;">) : </span><span style="color:#cd74e8;">ORIGIN</span><span style="color:#abb2bf;"> = </span><span style="color:#db9d63;">0x8000000</span><span style="color:#abb2bf;">, </span><span style="color:#cd74e8;">LENGTH</span><span style="color:#abb2bf;"> = </span><span style="color:#db9d63;">64K
+</span><span style="color:#abb2bf;">}
+</span><span style="color:#abb2bf;">
+</span><span style="color:#cd74e8;">SECTIONS
+</span><span style="color:#abb2bf;">{
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">.isr_vector</span><span style="color:#abb2bf;"> : </span><span style="color:#cd74e8;">ALIGN</span><span style="color:#abb2bf;">(</span><span style="color:#db9d63;">4</span><span style="color:#abb2bf;">)
+</span><span style="color:#abb2bf;">    {
+</span><span style="color:#abb2bf;">        </span><span style="color:#cd74e8;">KEEP</span><span style="color:#abb2bf;">(*(</span><span style="color:#eb6772;">.isr_vector</span><span style="color:#abb2bf;">))
+</span><span style="color:#abb2bf;">    } &gt; </span><span style="color:#eb6772;">FLASH
+</span><span style="color:#abb2bf;">
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">.text</span><span style="color:#abb2bf;"> : </span><span style="color:#cd74e8;">ALIGN</span><span style="color:#abb2bf;">(</span><span style="color:#db9d63;">4</span><span style="color:#abb2bf;">)
+</span><span style="color:#abb2bf;">    {
+</span><span style="color:#abb2bf;">        *(</span><span style="color:#eb6772;">.text</span><span style="color:#abb2bf;">)
+</span><span style="color:#abb2bf;">        *(</span><span style="color:#eb6772;">.text</span><span style="color:#abb2bf;">*)
+</span><span style="color:#abb2bf;">        </span><span style="color:#cd74e8;">KEEP</span><span style="color:#abb2bf;"> (*(</span><span style="color:#eb6772;">.init</span><span style="color:#abb2bf;">))
+</span><span style="color:#abb2bf;">        </span><span style="color:#cd74e8;">KEEP</span><span style="color:#abb2bf;"> (*(</span><span style="color:#eb6772;">.fini</span><span style="color:#abb2bf;">))
+</span><span style="color:#abb2bf;">    } &gt; </span><span style="color:#eb6772;">FLASH
+</span><span style="color:#abb2bf;">
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">.preinit_array</span><span style="color:#abb2bf;"> : </span><span style="color:#cd74e8;">ALIGN</span><span style="color:#abb2bf;">(</span><span style="color:#db9d63;">4</span><span style="color:#abb2bf;">)
+</span><span style="color:#abb2bf;">    {
+</span><span style="color:#abb2bf;">        </span><span style="color:#cd74e8;">PROVIDE_HIDDEN</span><span style="color:#abb2bf;">(</span><span style="color:#eb6772;">__preinit_array_start</span><span style="color:#abb2bf;"> = </span><span style="color:#eb6772;">.</span><span style="color:#abb2bf;">);
+</span><span style="color:#abb2bf;">        </span><span style="color:#cd74e8;">KEEP</span><span style="color:#abb2bf;">(*(</span><span style="color:#eb6772;">.preinit_array</span><span style="color:#abb2bf;">*))
+</span><span style="color:#abb2bf;">        </span><span style="color:#cd74e8;">PROVIDE_HIDDEN</span><span style="color:#abb2bf;">(</span><span style="color:#eb6772;">__preinit_array_end</span><span style="color:#abb2bf;"> = </span><span style="color:#eb6772;">.</span><span style="color:#abb2bf;">);
+</span><span style="color:#abb2bf;">    } &gt; </span><span style="color:#eb6772;">FLASH
+</span><span style="color:#abb2bf;">
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">.init_array</span><span style="color:#abb2bf;"> : </span><span style="color:#cd74e8;">ALIGN</span><span style="color:#abb2bf;">(</span><span style="color:#db9d63;">4</span><span style="color:#abb2bf;">)
+</span><span style="color:#abb2bf;">    {
+</span><span style="color:#abb2bf;">        </span><span style="color:#cd74e8;">PROVIDE_HIDDEN</span><span style="color:#abb2bf;">(</span><span style="color:#eb6772;">__init_array_start</span><span style="color:#abb2bf;"> = </span><span style="color:#eb6772;">.</span><span style="color:#abb2bf;">);
+</span><span style="color:#abb2bf;">        </span><span style="color:#cd74e8;">KEEP</span><span style="color:#abb2bf;">(*(</span><span style="color:#eb6772;">SORT</span><span style="color:#abb2bf;">(</span><span style="color:#eb6772;">.init_array.</span><span style="color:#abb2bf;">*)))
+</span><span style="color:#abb2bf;">        </span><span style="color:#cd74e8;">KEEP</span><span style="color:#abb2bf;">(*(</span><span style="color:#eb6772;">.init_array</span><span style="color:#abb2bf;">))
+</span><span style="color:#abb2bf;">        </span><span style="color:#cd74e8;">PROVIDE_HIDDEN</span><span style="color:#abb2bf;">(</span><span style="color:#eb6772;">__init_array_end</span><span style="color:#abb2bf;"> = </span><span style="color:#eb6772;">.</span><span style="color:#abb2bf;">);
+</span><span style="color:#abb2bf;">    } &gt; </span><span style="color:#eb6772;">FLASH
+</span><span style="color:#abb2bf;">
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">.fini_array</span><span style="color:#abb2bf;"> : </span><span style="color:#cd74e8;">ALIGN</span><span style="color:#abb2bf;">(</span><span style="color:#db9d63;">4</span><span style="color:#abb2bf;">)
+</span><span style="color:#abb2bf;">    {
+</span><span style="color:#abb2bf;">        </span><span style="color:#cd74e8;">PROVIDE_HIDDEN</span><span style="color:#abb2bf;">(</span><span style="color:#eb6772;">__fini_array_start</span><span style="color:#abb2bf;"> = </span><span style="color:#eb6772;">.</span><span style="color:#abb2bf;">);
+</span><span style="color:#abb2bf;">        </span><span style="color:#cd74e8;">KEEP</span><span style="color:#abb2bf;">(*(</span><span style="color:#eb6772;">SORT</span><span style="color:#abb2bf;">(</span><span style="color:#eb6772;">.fini_array.</span><span style="color:#abb2bf;">*)))
+</span><span style="color:#abb2bf;">        </span><span style="color:#cd74e8;">KEEP</span><span style="color:#abb2bf;">(*(</span><span style="color:#eb6772;">.fini_array</span><span style="color:#abb2bf;">))
+</span><span style="color:#abb2bf;">        </span><span style="color:#cd74e8;">PROVIDE_HIDDEN</span><span style="color:#abb2bf;">(</span><span style="color:#eb6772;">__fini_array_end</span><span style="color:#abb2bf;"> = </span><span style="color:#eb6772;">.</span><span style="color:#abb2bf;">);
+</span><span style="color:#abb2bf;">    } &gt; </span><span style="color:#eb6772;">FLASH
+</span><span style="color:#abb2bf;">
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">.rodata</span><span style="color:#abb2bf;"> : </span><span style="color:#cd74e8;">ALIGN</span><span style="color:#abb2bf;">(</span><span style="color:#db9d63;">4</span><span style="color:#abb2bf;">)
+</span><span style="color:#abb2bf;">    {
+</span><span style="color:#abb2bf;">        *(</span><span style="color:#eb6772;">.rodata</span><span style="color:#abb2bf;">)
+</span><span style="color:#abb2bf;">        *(</span><span style="color:#eb6772;">.rodata</span><span style="color:#abb2bf;">*)
+</span><span style="color:#abb2bf;">    } &gt; </span><span style="color:#eb6772;">FLASH
+</span><span style="color:#abb2bf;">
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">_sidata</span><span style="color:#abb2bf;"> = </span><span style="color:#eb6772;">LOADADDR</span><span style="color:#abb2bf;">(</span><span style="color:#eb6772;">.data</span><span style="color:#abb2bf;">);
+</span><span style="color:#abb2bf;">
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">.data</span><span style="color:#abb2bf;"> : </span><span style="color:#cd74e8;">ALIGN</span><span style="color:#abb2bf;">(</span><span style="color:#db9d63;">4</span><span style="color:#abb2bf;">)
+</span><span style="color:#abb2bf;">    {
+</span><span style="color:#abb2bf;">        </span><span style="color:#eb6772;">_sdata</span><span style="color:#abb2bf;"> = </span><span style="color:#eb6772;">.</span><span style="color:#abb2bf;">;
+</span><span style="color:#abb2bf;">        *(</span><span style="color:#eb6772;">.data</span><span style="color:#abb2bf;">)
+</span><span style="color:#abb2bf;">        *(</span><span style="color:#eb6772;">.data</span><span style="color:#abb2bf;">*)
+</span><span style="color:#abb2bf;">        </span><span style="color:#eb6772;">_edata</span><span style="color:#abb2bf;"> = </span><span style="color:#cd74e8;">ALIGN</span><span style="color:#abb2bf;">(</span><span style="color:#db9d63;">4</span><span style="color:#abb2bf;">);
+</span><span style="color:#abb2bf;">    } &gt; </span><span style="color:#eb6772;">RAM </span><span style="color:#cd74e8;">AT</span><span style="color:#abb2bf;">&gt; </span><span style="color:#eb6772;">FLASH
+</span><span style="color:#abb2bf;">
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">.bss</span><span style="color:#abb2bf;"> : </span><span style="color:#cd74e8;">ALIGN</span><span style="color:#abb2bf;">(</span><span style="color:#db9d63;">4</span><span style="color:#abb2bf;">)
+</span><span style="color:#abb2bf;">    {
+</span><span style="color:#abb2bf;">        </span><span style="color:#eb6772;">_sbss</span><span style="color:#abb2bf;"> = </span><span style="color:#eb6772;">.</span><span style="color:#abb2bf;">;
+</span><span style="color:#abb2bf;">        </span><span style="color:#eb6772;">__bss_start__</span><span style="color:#abb2bf;"> = </span><span style="color:#eb6772;">_sbss</span><span style="color:#abb2bf;">;
+</span><span style="color:#abb2bf;">        *(</span><span style="color:#eb6772;">.bss</span><span style="color:#abb2bf;">)
+</span><span style="color:#abb2bf;">        *(</span><span style="color:#eb6772;">.bss</span><span style="color:#abb2bf;">*)
+</span><span style="color:#abb2bf;">        </span><span style="color:#eb6772;">_ebss</span><span style="color:#abb2bf;"> = </span><span style="color:#cd74e8;">ALIGN</span><span style="color:#abb2bf;">(</span><span style="color:#db9d63;">4</span><span style="color:#abb2bf;">);
+</span><span style="color:#abb2bf;">        </span><span style="color:#eb6772;">__bss_end__</span><span style="color:#abb2bf;"> = </span><span style="color:#eb6772;">_ebss</span><span style="color:#abb2bf;">;
+</span><span style="color:#abb2bf;">    } &gt; </span><span style="color:#eb6772;">RAM
+</span><span style="color:#abb2bf;">
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">.heap</span><span style="color:#abb2bf;"> (</span><span style="color:#eb6772;">NOLOAD</span><span style="color:#abb2bf;">) : </span><span style="color:#cd74e8;">ALIGN</span><span style="color:#abb2bf;">(</span><span style="color:#db9d63;">8</span><span style="color:#abb2bf;">)
+</span><span style="color:#abb2bf;">    {
+</span><span style="color:#abb2bf;">        </span><span style="color:#eb6772;">PROVIDE</span><span style="color:#abb2bf;"> ( </span><span style="color:#eb6772;">end</span><span style="color:#abb2bf;"> = </span><span style="color:#eb6772;">.</span><span style="color:#abb2bf;"> );
+</span><span style="color:#abb2bf;">        </span><span style="color:#eb6772;">PROVIDE</span><span style="color:#abb2bf;"> ( </span><span style="color:#eb6772;">_end</span><span style="color:#abb2bf;"> = </span><span style="color:#eb6772;">.</span><span style="color:#abb2bf;"> );
+</span><span style="color:#abb2bf;">        </span><span style="color:#eb6772;">.</span><span style="color:#abb2bf;"> = </span><span style="color:#eb6772;">.</span><span style="color:#abb2bf;"> + </span><span style="color:#db9d63;">0x200</span><span style="color:#abb2bf;">;
+</span><span style="color:#abb2bf;">    } &gt; </span><span style="color:#eb6772;">RAM
+</span><span style="color:#abb2bf;">
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">.stack</span><span style="color:#abb2bf;"> (</span><span style="color:#eb6772;">NOLOAD</span><span style="color:#abb2bf;">) : </span><span style="color:#cd74e8;">ALIGN</span><span style="color:#abb2bf;">(</span><span style="color:#db9d63;">8</span><span style="color:#abb2bf;">)
+</span><span style="color:#abb2bf;">    {
+</span><span style="color:#abb2bf;">        </span><span style="font-style:italic;color:#5f697a;">/* A minimum beyond which linking will fail */
+</span><span style="color:#abb2bf;">        </span><span style="color:#eb6772;">.</span><span style="color:#abb2bf;"> = </span><span style="color:#eb6772;">.</span><span style="color:#abb2bf;"> + </span><span style="color:#db9d63;">0x400</span><span style="color:#abb2bf;">;
+</span><span style="color:#abb2bf;">    } &gt; </span><span style="color:#eb6772;">RAM
+</span><span style="color:#abb2bf;">
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">_estack</span><span style="color:#abb2bf;"> = </span><span style="color:#cd74e8;">ORIGIN</span><span style="color:#abb2bf;">(</span><span style="color:#eb6772;">RAM</span><span style="color:#abb2bf;">) + </span><span style="color:#cd74e8;">LENGTH</span><span style="color:#abb2bf;">(</span><span style="color:#eb6772;">RAM</span><span style="color:#abb2bf;">);
+</span><span style="color:#abb2bf;">}
+</span></code></pre>
+<h2 id="turning-the-linker-script-into-a-template">Turning the linker script into a template</h2>
+<p>We could generate linker scripts from templates in a couple of ways.
+For instance, we could use Python and Jinja templates, CMake’s built-in <code>configure_file()</code> to replace placeholders or even go wild and use <code>sed</code>.
+In our case however, we'll be using the C preprocessor!
+It lives inside your toolchain, can substitute placeholders and conditionally include or not whole sections of text.</p>
+<p>Our first step is to factor out constants like the stack and heap size so that we can configure them dynamically:</p>
+<pre data-lang="ld" style="background-color:#2b303b;color:#6c7079;" class="language-ld "><code class="language-ld" data-lang="ld"><span style="font-style:italic;color:#5f697a;">/* --snip-- */
+</span><span style="color:#cd74e8;">MEMORY
+</span><span style="color:#abb2bf;">{
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">RAM</span><span style="color:#abb2bf;"> (</span><span style="color:#eb6772;">xrw</span><span style="color:#abb2bf;">)  : </span><span style="color:#cd74e8;">ORIGIN</span><span style="color:#abb2bf;"> = </span><span style="color:#eb6772;">RAM_ORIGIN</span><span style="color:#abb2bf;">, </span><span style="color:#cd74e8;">LENGTH</span><span style="color:#abb2bf;"> = </span><span style="color:#eb6772;">RAM_LENGTH
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">FLASH</span><span style="color:#abb2bf;"> (</span><span style="color:#eb6772;">rx</span><span style="color:#abb2bf;">) : </span><span style="color:#cd74e8;">ORIGIN</span><span style="color:#abb2bf;"> = </span><span style="color:#eb6772;">FLASH_ORIGIN</span><span style="color:#abb2bf;">, </span><span style="color:#cd74e8;">LENGTH</span><span style="color:#abb2bf;"> = </span><span style="color:#eb6772;">FLASH_LENGTH
+</span><span style="color:#abb2bf;">}
+</span><span style="color:#abb2bf;">
+</span><span style="color:#cd74e8;">SECTIONS
+</span><span style="color:#abb2bf;">{
+</span><span style="color:#abb2bf;">    </span><span style="font-style:italic;color:#5f697a;">/* --snip-- */
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">.heap</span><span style="color:#abb2bf;"> (</span><span style="color:#eb6772;">NOLOAD</span><span style="color:#abb2bf;">) : </span><span style="color:#cd74e8;">ALIGN</span><span style="color:#abb2bf;">(</span><span style="color:#db9d63;">8</span><span style="color:#abb2bf;">)
+</span><span style="color:#abb2bf;">    {
+</span><span style="color:#abb2bf;">        </span><span style="color:#eb6772;">PROVIDE</span><span style="color:#abb2bf;"> ( </span><span style="color:#eb6772;">end</span><span style="color:#abb2bf;"> = </span><span style="color:#eb6772;">.</span><span style="color:#abb2bf;"> );
+</span><span style="color:#abb2bf;">        </span><span style="color:#eb6772;">PROVIDE</span><span style="color:#abb2bf;"> ( </span><span style="color:#eb6772;">_end</span><span style="color:#abb2bf;"> = </span><span style="color:#eb6772;">.</span><span style="color:#abb2bf;"> );
+</span><span style="color:#abb2bf;">        </span><span style="color:#eb6772;">.</span><span style="color:#abb2bf;"> = </span><span style="color:#eb6772;">.</span><span style="color:#abb2bf;"> + </span><span style="color:#eb6772;">HEAP_SIZE</span><span style="color:#abb2bf;">;
+</span><span style="color:#abb2bf;">    } &gt; </span><span style="color:#eb6772;">RAM
+</span><span style="color:#abb2bf;">
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">.stack</span><span style="color:#abb2bf;"> (</span><span style="color:#eb6772;">NOLOAD</span><span style="color:#abb2bf;">) : </span><span style="color:#cd74e8;">ALIGN</span><span style="color:#abb2bf;">(</span><span style="color:#db9d63;">8</span><span style="color:#abb2bf;">)
+</span><span style="color:#abb2bf;">    {
+</span><span style="color:#abb2bf;">        </span><span style="color:#eb6772;">.</span><span style="color:#abb2bf;"> = </span><span style="color:#eb6772;">.</span><span style="color:#abb2bf;"> + </span><span style="color:#eb6772;">MINIMUM_STACK_SIZE</span><span style="color:#abb2bf;">;
+</span><span style="color:#abb2bf;">    } &gt; </span><span style="color:#eb6772;">RAM
+</span><span style="color:#abb2bf;">   </span><span style="font-style:italic;color:#5f697a;">/* --snip-- */
+</span><span style="color:#abb2bf;">}
+</span></code></pre>
+<p>and rename the linker script to <code>linker.ld.in</code> to make it clear that that it is indeed a template.
+Now we can run the preprocessor to verify that we haven't broken anything:</p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#6c7079;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#eb6772;">arm-none-eabi-gcc </span><span style="color:#abb2bf;">\
+</span><span style="color:#eb6772;">    -E -P -x</span><span style="color:#abb2bf;"> c \
+</span><span style="color:#eb6772;">    -DRAM_ORIGIN</span><span style="color:#adb7c9;">=</span><span style="color:#abb2bf;">0x20000000 \
+</span><span style="color:#eb6772;">    -DRAM_LENGTH</span><span style="color:#adb7c9;">=</span><span style="color:#abb2bf;">20K \
+</span><span style="color:#eb6772;">    -DFLASH_ORIGIN</span><span style="color:#adb7c9;">=</span><span style="color:#abb2bf;">0x08000000 \
+</span><span style="color:#eb6772;">    -DFLASH_LENGTH</span><span style="color:#adb7c9;">=</span><span style="color:#abb2bf;">64K \
+</span><span style="color:#eb6772;">    -DHEAP_SIZE</span><span style="color:#adb7c9;">=</span><span style="color:#abb2bf;">0x200 \
+</span><span style="color:#eb6772;">    -DMINIMUM_STACK_SIZE</span><span style="color:#adb7c9;">=</span><span style="color:#abb2bf;">0x400 \
+</span><span style="color:#abb2bf;">    linker.ld.in </span><span style="color:#adb7c9;">&gt;</span><span style="color:#abb2bf;"> linker.ld
+</span></code></pre>
+<blockquote>
+<p><strong>Note:</strong> The <code>-E</code> argument invokes the preprocessor only, despite us calling the compiler binary, whereas <code>-x c</code> flag forces the file to be treated as a preprocessor input, and <code>-P</code> suppresses line markers which the preprocessor normally emits.</p>
+</blockquote>
+<p>If all goes well, the generated linker script should match the one we started with.</p>
+<p>Now that we know that this works, we can integrate it into our build system.
+First we will move these values into CMake variables.</p>
+<pre data-lang="CMake" style="background-color:#2b303b;color:#6c7079;" class="language-CMake "><code class="language-CMake" data-lang="CMake"><span style="color:#5ebfcc;">set</span><span style="color:#abb2bf;">(</span><span style="color:#eb6772;">RAM_ORIGIN </span><span style="color:#abb2bf;">0x20000000)
+</span><span style="color:#5ebfcc;">set</span><span style="color:#abb2bf;">(</span><span style="color:#eb6772;">RAM_LENGTH </span><span style="color:#abb2bf;">20480)
+</span><span style="color:#5ebfcc;">set</span><span style="color:#abb2bf;">(</span><span style="color:#eb6772;">FLASH_ORIGIN </span><span style="color:#abb2bf;">0x08000000)
+</span><span style="color:#5ebfcc;">set</span><span style="color:#abb2bf;">(</span><span style="color:#eb6772;">FLASH_LENGTH </span><span style="color:#abb2bf;">65536)
+</span><span style="color:#5ebfcc;">set</span><span style="color:#abb2bf;">(</span><span style="color:#eb6772;">HEAP_SIZE </span><span style="color:#abb2bf;">0x200)
+</span><span style="color:#5ebfcc;">set</span><span style="color:#abb2bf;">(</span><span style="color:#eb6772;">MINIMUM_STACK_SIZE </span><span style="color:#abb2bf;">0x400)
+</span></code></pre>
+<blockquote>
+<p><strong>Note:</strong> We are making them purely numeric in order to be able to do operations on them later.</p>
+</blockquote>
+<p>Then, we can use a CMake <a href="https://cmake.org/cmake/help/latest/command/add_custom_command.html">custom command</a>:</p>
+<pre data-lang="CMake" style="background-color:#2b303b;color:#6c7079;" class="language-CMake "><code class="language-CMake" data-lang="CMake"><span style="color:#5ebfcc;">add_custom_command</span><span style="color:#abb2bf;">(
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">OUTPUT </span><span style="color:#abb2bf;">${</span><span style="color:#eb6772;">CMAKE_BINARY_DIR</span><span style="color:#abb2bf;">}/linker.ld
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">COMMAND </span><span style="color:#abb2bf;">${</span><span style="color:#eb6772;">CMAKE_C_COMPILER</span><span style="color:#abb2bf;">}
+</span><span style="color:#abb2bf;">            -E -P -x c
+</span><span style="color:#abb2bf;">            -DRAM_ORIGIN=${</span><span style="color:#eb6772;">RAM_ORIGIN</span><span style="color:#abb2bf;">}
+</span><span style="color:#abb2bf;">            -DRAM_LENGTH=${</span><span style="color:#eb6772;">RAM_LENGTH</span><span style="color:#abb2bf;">}
+</span><span style="color:#abb2bf;">            -DFLASH_ORIGIN=${</span><span style="color:#eb6772;">FLASH_ORIGIN</span><span style="color:#abb2bf;">}
+</span><span style="color:#abb2bf;">            -DFLASH_LENGTH=${</span><span style="color:#eb6772;">FLASH_LENGTH</span><span style="color:#abb2bf;">}
+</span><span style="color:#abb2bf;">            -DHEAP_SIZE=${</span><span style="color:#eb6772;">HEAP_SIZE</span><span style="color:#abb2bf;">}
+</span><span style="color:#abb2bf;">            -DMINIMUM_STACK_SIZE=${</span><span style="color:#eb6772;">MINIMUM_STACK_SIZE</span><span style="color:#abb2bf;">}
+</span><span style="color:#abb2bf;">            ${</span><span style="color:#eb6772;">CMAKE_SOURCE_DIR</span><span style="color:#abb2bf;">}/linker.ld.in
+</span><span style="color:#abb2bf;">            &gt; ${</span><span style="color:#eb6772;">CMAKE_BINARY_DIR</span><span style="color:#abb2bf;">}/linker.ld
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">DEPENDS </span><span style="color:#abb2bf;">${</span><span style="color:#eb6772;">CMAKE_SOURCE_DIR</span><span style="color:#abb2bf;">}/linker.ld.in
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">COMMENT </span><span style="color:#9acc76;">&quot;Generating linker script&quot;
+</span><span style="color:#abb2bf;">)
+</span></code></pre>
+<blockquote>
+<p><strong>Note:</strong> The <code>DEPENDS</code> here makes sure that if the template itself changes, CMake understands that the command needs to be run again.</p>
+</blockquote>
+<p>and make it run at build time by making the executable depend on the generated linker script:</p>
+<pre data-lang="CMake" style="background-color:#2b303b;color:#6c7079;" class="language-CMake "><code class="language-CMake" data-lang="CMake"><span style="color:#5ebfcc;">add_executable</span><span style="color:#abb2bf;">(${</span><span style="color:#eb6772;">EXECUTABLE</span><span style="color:#abb2bf;">}
+</span><span style="color:#abb2bf;">    </span><span style="font-style:italic;color:#5f697a;"># --snip--
+</span><span style="color:#abb2bf;">    ${</span><span style="color:#eb6772;">CMAKE_BINARY_DIR</span><span style="color:#abb2bf;">}/linker.ld
+</span><span style="color:#abb2bf;">)
+</span></code></pre>
+<p>Lastly, we can change the linking options to use our generated linker script:</p>
+<pre data-lang="CMake" style="background-color:#2b303b;color:#6c7079;" class="language-CMake "><code class="language-CMake" data-lang="CMake"><span style="color:#eb6772;">add_link_options</span><span style="color:#abb2bf;">(
+</span><span style="color:#abb2bf;">    </span><span style="font-style:italic;color:#5f697a;"># --snip--
+</span><span style="color:#abb2bf;">    -T${</span><span style="color:#eb6772;">CMAKE_BINARY_DIR</span><span style="color:#abb2bf;">}/linker.ld
+</span><span style="color:#abb2bf;">    </span><span style="font-style:italic;color:#5f697a;"># --snip--
+</span><span style="color:#abb2bf;">)
+</span></code></pre>
+<p>With this, our project builds and we can finally get to the fun part - making the linker script configurable!</p>
+<h2 id="adding-options">Adding options</h2>
+<p>Let's start simple by making the stack and heap size configurable.
+After deleting the constants we previously added, we need simply define cached values when configuring the project:</p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#6c7079;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#eb6772;">cmake -S</span><span style="color:#abb2bf;"> .</span><span style="color:#eb6772;"> -B</span><span style="color:#abb2bf;"> build</span><span style="color:#eb6772;"> -DHEAP_SIZE</span><span style="color:#adb7c9;">=</span><span style="color:#abb2bf;">0</span><span style="color:#eb6772;"> -DMINIMUM_STACK_SIZE</span><span style="color:#adb7c9;">=</span><span style="color:#abb2bf;">0x800</span><span style="color:#eb6772;"> -DCMAKE_BUILD_TYPE</span><span style="color:#adb7c9;">=</span><span style="color:#abb2bf;">Debug</span><span style="color:#eb6772;"> -DCMAKE_TOOLCHAIN_FILE</span><span style="color:#adb7c9;">=</span><span style="color:#abb2bf;">arm-none-eabi-gcc.cmake
+</span></code></pre>
+<p>We can now check the resultant <code>linker.ld</code> file in our build folder:</p>
+<pre data-lang="ld" style="background-color:#2b303b;color:#6c7079;" class="language-ld "><code class="language-ld" data-lang="ld"><span style="font-style:italic;color:#5f697a;">/* --snip-- */
+</span><span style="color:#abb2bf;">
+</span><span style="color:#eb6772;">.heap</span><span style="color:#abb2bf;"> (</span><span style="color:#eb6772;">NOLOAD</span><span style="color:#abb2bf;">) : </span><span style="color:#cd74e8;">ALIGN</span><span style="color:#abb2bf;">(</span><span style="color:#db9d63;">8</span><span style="color:#abb2bf;">)
+</span><span style="color:#abb2bf;">{
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">PROVIDE</span><span style="color:#abb2bf;"> ( </span><span style="color:#eb6772;">end</span><span style="color:#abb2bf;"> = </span><span style="color:#eb6772;">.</span><span style="color:#abb2bf;"> );
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">PROVIDE</span><span style="color:#abb2bf;"> ( </span><span style="color:#eb6772;">_end</span><span style="color:#abb2bf;"> = </span><span style="color:#eb6772;">.</span><span style="color:#abb2bf;"> );
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">.</span><span style="color:#abb2bf;"> = </span><span style="color:#eb6772;">.</span><span style="color:#abb2bf;"> + </span><span style="color:#db9d63;">0</span><span style="color:#abb2bf;">;
+</span><span style="color:#abb2bf;">} &gt; </span><span style="color:#eb6772;">RAM
+</span><span style="color:#abb2bf;">
+</span><span style="color:#eb6772;">.stack</span><span style="color:#abb2bf;"> (</span><span style="color:#eb6772;">NOLOAD</span><span style="color:#abb2bf;">) : </span><span style="color:#cd74e8;">ALIGN</span><span style="color:#abb2bf;">(</span><span style="color:#db9d63;">8</span><span style="color:#abb2bf;">)
+</span><span style="color:#abb2bf;">{
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">.</span><span style="color:#abb2bf;"> = </span><span style="color:#eb6772;">.</span><span style="color:#abb2bf;"> + </span><span style="color:#db9d63;">0x800</span><span style="color:#abb2bf;">;
+</span><span style="color:#abb2bf;">} &gt; </span><span style="color:#eb6772;">RAM
+</span><span style="color:#abb2bf;">
+</span><span style="font-style:italic;color:#5f697a;">/* --snip-- */
+</span></code></pre>
+<p>Nice!
+This should be our starting point when debugging any linker generation issues in the future.</p>
+<p>Since it is good practice to introduce default values for user configuration in CMake, we can handle the case when variables aren't defined:</p>
+<pre data-lang="CMake" style="background-color:#2b303b;color:#6c7079;" class="language-CMake "><code class="language-CMake" data-lang="CMake"><span style="color:#cd74e8;">if </span><span style="color:#abb2bf;">(</span><span style="color:#adb7c9;">NOT </span><span style="color:#eb6772;">DEFINED </span><span style="color:#abb2bf;">HEAP_SIZE)
+</span><span style="color:#abb2bf;">    </span><span style="color:#5ebfcc;">set</span><span style="color:#abb2bf;">(</span><span style="color:#eb6772;">HEAP_SIZE </span><span style="color:#abb2bf;">0x200)
+</span><span style="color:#cd74e8;">endif</span><span style="color:#abb2bf;">()
+</span><span style="color:#cd74e8;">if </span><span style="color:#abb2bf;">(</span><span style="color:#adb7c9;">NOT </span><span style="color:#eb6772;">DEFINED </span><span style="color:#abb2bf;">MINIMUM_STACK_SIZE)
+</span><span style="color:#abb2bf;">    </span><span style="color:#5ebfcc;">set</span><span style="color:#abb2bf;">(</span><span style="color:#eb6772;">MINIMUM_STACK_SIZE </span><span style="color:#abb2bf;">0x400)
+</span><span style="color:#cd74e8;">endif</span><span style="color:#abb2bf;">()
+</span></code></pre>
+<p>Next, let’s tackle optional bootloader support.
+The STM32 <a href="https://www.st.com/resource/en/reference_manual/rm0008-stm32f101xx-stm32f102xx-stm32f103xx-stm32f105xx-and-stm32f107xx-advanced-armbased-32bit-mcus-stmicroelectronics.pdf">chip we are using</a> has uniform 1KB pages, so the bootloader could be sized any multiple of that.
+Additionally, some of those sectors could also be used for EEPROM emulation or other purposes.
+For the most general solution, we can handle this by introducing a <code>FIRMWARE_FLASH_OFFSET</code> variable:</p>
+<pre data-lang="CMake" style="background-color:#2b303b;color:#6c7079;" class="language-CMake "><code class="language-CMake" data-lang="CMake"><span style="color:#cd74e8;">if </span><span style="color:#abb2bf;">(</span><span style="color:#eb6772;">DEFINED </span><span style="color:#abb2bf;">FIRMWARE_FLASH_OFFSET)
+</span><span style="color:#abb2bf;">    </span><span style="color:#5ebfcc;">math</span><span style="color:#abb2bf;">(</span><span style="color:#eb6772;">EXPR </span><span style="color:#abb2bf;">FLASH_ORIGIN </span><span style="color:#9acc76;">&quot;${</span><span style="color:#eb6772;">FLASH_ORIGIN</span><span style="color:#9acc76;">} + ${</span><span style="color:#eb6772;">FIRMWARE_FLASH_OFFSET</span><span style="color:#9acc76;">}&quot;</span><span style="color:#abb2bf;">)
+</span><span style="color:#abb2bf;">    </span><span style="color:#5ebfcc;">math</span><span style="color:#abb2bf;">(</span><span style="color:#eb6772;">EXPR </span><span style="color:#abb2bf;">FLASH_LENGTH </span><span style="color:#9acc76;">&quot;${</span><span style="color:#eb6772;">FLASH_LENGTH</span><span style="color:#9acc76;">} - ${</span><span style="color:#eb6772;">FIRMWARE_FLASH_OFFSET</span><span style="color:#9acc76;">}&quot;</span><span style="color:#abb2bf;">)
+</span><span style="color:#cd74e8;">endif</span><span style="color:#abb2bf;">()
+</span></code></pre>
+<p>Another way to verify that our changes worked is to look at the <code>.map</code> file in our build folder:</p>
+<pre data-lang="ld" style="background-color:#2b303b;color:#6c7079;" class="language-ld "><code class="language-ld" data-lang="ld"><span style="color:#eb6772;">.isr_vector     </span><span style="color:#db9d63;">0x08001000      0x10c
+</span><span style="color:#abb2bf;"> *(</span><span style="color:#eb6772;">.isr_vector</span><span style="color:#abb2bf;">)
+</span><span style="color:#abb2bf;"> </span><span style="color:#eb6772;">.isr_vector    </span><span style="color:#db9d63;">0x08001000      0x10c </span><span style="color:#eb6772;">CMakeFiles</span><span style="color:#abb2bf;">/</span><span style="color:#eb6772;">most_commented_embedded_cmakelists.elf.dir</span><span style="color:#abb2bf;">/</span><span style="color:#eb6772;">startup_stm32f103xb.S.obj
+</span><span style="color:#abb2bf;">                </span><span style="color:#db9d63;">0x08001000                </span><span style="color:#eb6772;">g_pfnVectors
+</span><span style="color:#abb2bf;">
+</span><span style="color:#eb6772;">.text           </span><span style="color:#db9d63;">0x0800110c      0xbd4
+</span></code></pre>
+<p>In this case we used an offset of 4 Kilobytes and that is clearly reflected in the output.</p>
+<p>In some situations, you might want to upload the entire firmware into RAM.
+What you get this way is much faster firmware uploads, don't add wear to the flash and in some cases avoid the flash application image format requirements when bringing up new chips.</p>
+<p>To get a RAM-only firmware image, we have to replace the output section to region placement everywhere <code>FLASH</code> is used.
+For example, <code>.data</code> normally resides in RAM but is initialized from FLASH:</p>
+<pre data-lang="ld" style="background-color:#2b303b;color:#6c7079;" class="language-ld "><code class="language-ld" data-lang="ld"><span style="color:#eb6772;">.data</span><span style="color:#abb2bf;"> : </span><span style="color:#cd74e8;">ALIGN</span><span style="color:#abb2bf;">(</span><span style="color:#db9d63;">4</span><span style="color:#abb2bf;">)
+</span><span style="color:#abb2bf;">{
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">_sdata</span><span style="color:#abb2bf;"> = </span><span style="color:#eb6772;">.</span><span style="color:#abb2bf;">;
+</span><span style="color:#abb2bf;">    *(</span><span style="color:#eb6772;">.data</span><span style="color:#abb2bf;">)
+</span><span style="color:#abb2bf;">    *(</span><span style="color:#eb6772;">.data</span><span style="color:#abb2bf;">*)
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">_edata</span><span style="color:#abb2bf;"> = </span><span style="color:#cd74e8;">ALIGN</span><span style="color:#abb2bf;">(</span><span style="color:#db9d63;">4</span><span style="color:#abb2bf;">);
+</span><span style="color:#abb2bf;">} &gt; </span><span style="color:#eb6772;">RAM </span><span style="color:#cd74e8;">AT</span><span style="color:#abb2bf;"> &gt; </span><span style="color:#eb6772;">FLASH
+</span></code></pre>
+<p>For a RAM-only build, we change it to:</p>
+<pre data-lang="ld" style="background-color:#2b303b;color:#6c7079;" class="language-ld "><code class="language-ld" data-lang="ld"><span style="color:#eb6772;">.data</span><span style="color:#abb2bf;"> : </span><span style="color:#cd74e8;">ALIGN</span><span style="color:#abb2bf;">(</span><span style="color:#db9d63;">4</span><span style="color:#abb2bf;">)
+</span><span style="color:#abb2bf;">{
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">_sdata</span><span style="color:#abb2bf;"> = </span><span style="color:#eb6772;">.</span><span style="color:#abb2bf;">;
+</span><span style="color:#abb2bf;">    *(</span><span style="color:#eb6772;">.data</span><span style="color:#abb2bf;">)
+</span><span style="color:#abb2bf;">    *(</span><span style="color:#eb6772;">.data</span><span style="color:#abb2bf;">*)
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">_edata</span><span style="color:#abb2bf;"> = </span><span style="color:#cd74e8;">ALIGN</span><span style="color:#abb2bf;">(</span><span style="color:#db9d63;">4</span><span style="color:#abb2bf;">);
+</span><span style="color:#abb2bf;">} &gt; </span><span style="color:#eb6772;">RAM
+</span></code></pre>
+<p>Since we're using the C preprocessor, we can just <code>#ifdef</code> the mapping:</p>
+<pre data-lang="ld" style="background-color:#2b303b;color:#6c7079;" class="language-ld "><code class="language-ld" data-lang="ld"><span style="color:#eb6772;">.data</span><span style="color:#abb2bf;"> : </span><span style="color:#cd74e8;">ALIGN</span><span style="color:#abb2bf;">(</span><span style="color:#db9d63;">4</span><span style="color:#abb2bf;">)
+</span><span style="color:#abb2bf;">{
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">_sdata</span><span style="color:#abb2bf;"> = </span><span style="color:#eb6772;">.</span><span style="color:#abb2bf;">;
+</span><span style="color:#abb2bf;">    *(</span><span style="color:#eb6772;">.data</span><span style="color:#abb2bf;">)
+</span><span style="color:#abb2bf;">    *(</span><span style="color:#eb6772;">.data</span><span style="color:#abb2bf;">*)
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">_edata</span><span style="color:#abb2bf;"> = </span><span style="color:#cd74e8;">ALIGN</span><span style="color:#abb2bf;">(</span><span style="color:#db9d63;">4</span><span style="color:#abb2bf;">);
+</span><span style="color:#abb2bf;">#</span><span style="color:#eb6772;">ifndef RAM_ONLY_BUILD
+</span><span style="color:#abb2bf;">} &gt; </span><span style="color:#eb6772;">RAM </span><span style="color:#cd74e8;">AT</span><span style="color:#abb2bf;"> &gt; </span><span style="color:#eb6772;">FLASH
+</span><span style="color:#abb2bf;">#</span><span style="color:#eb6772;">else
+</span><span style="color:#abb2bf;">} &gt; </span><span style="color:#eb6772;">RAM
+</span><span style="color:#abb2bf;">#</span><span style="color:#eb6772;">endif
+</span></code></pre>
+<p>To get the define from the user to the linker script preprocessing, first we want to add a configuration option and conditionally define <code>RAM_ONLY_BUILD</code>.</p>
+<pre data-lang="CMake" style="background-color:#2b303b;color:#6c7079;" class="language-CMake "><code class="language-CMake" data-lang="CMake"><span style="color:#5ebfcc;">option</span><span style="color:#abb2bf;">(RAM_ONLY_BUILD </span><span style="color:#9acc76;">&quot;If set, the entire firmware is placed in RAM&quot;</span><span style="color:#abb2bf;">)
+</span></code></pre>
+<p>and then conditionally define it for the linker script preprocessing using the <code>BOOL</code> generator expression:</p>
+<pre data-lang="CMake" style="background-color:#2b303b;color:#6c7079;" class="language-CMake "><code class="language-CMake" data-lang="CMake"><span style="color:#5ebfcc;">add_custom_command</span><span style="color:#abb2bf;">(
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">OUTPUT </span><span style="color:#abb2bf;">${</span><span style="color:#eb6772;">CMAKE_BINARY_DIR</span><span style="color:#abb2bf;">}/linker.ld
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">COMMAND </span><span style="color:#abb2bf;">${</span><span style="color:#eb6772;">CMAKE_C_COMPILER</span><span style="color:#abb2bf;">}
+</span><span style="color:#abb2bf;">            -E -P -x c
+</span><span style="color:#abb2bf;">            </span><span style="font-style:italic;color:#5f697a;"># -- snip --
+</span><span style="color:#abb2bf;">            $&lt;$&lt;</span><span style="color:#eb6772;">BOOL</span><span style="color:#abb2bf;">:${</span><span style="color:#eb6772;">RAM_ONLY_BUILD</span><span style="color:#abb2bf;">}&gt;:-</span><span style="color:#eb6772;">DRAM_ONLY_BUILD</span><span style="color:#abb2bf;">&gt;
+</span><span style="color:#abb2bf;">            ${</span><span style="color:#eb6772;">CMAKE_SOURCE_DIR</span><span style="color:#abb2bf;">}/linker.ld.in
+</span><span style="color:#abb2bf;">            &gt; ${</span><span style="color:#eb6772;">CMAKE_BINARY_DIR</span><span style="color:#abb2bf;">}/linker.ld
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">DEPENDS </span><span style="color:#abb2bf;">${</span><span style="color:#eb6772;">CMAKE_SOURCE_DIR</span><span style="color:#abb2bf;">}/linker.ld.in
+</span><span style="color:#abb2bf;">    </span><span style="color:#eb6772;">COMMENT </span><span style="color:#9acc76;">&quot;Generating the linker script&quot;
+</span><span style="color:#abb2bf;">)
+</span></code></pre>
+<blockquote>
+<p><strong>Note:</strong> If you haven't used <a href="https://cmake.org/cmake/help/latest/manual/cmake-generator-expressions.7.html">generator expressions</a> previously, what this essentially means is: if the boolean representation of the <code>RAM_ONLY_BUILD</code> value is true, add the text after <code>&gt;:</code>, otherwise not.</p>
+</blockquote>
+<p>Also, since non-zero initialized variables are normally copied from FLASH to RAM, we should also disable this behavior in the startup script:</p>
+<pre data-lang="asm" style="background-color:#2b303b;color:#6c7079;" class="language-asm "><code class="language-asm" data-lang="asm"><span style="color:#5cb3fa;">#ifndef RAM_ONLY_BUILD
+</span><span style="color:#5cb3fa;">/</span><span style="color:#abb2bf;">* </span><span style="color:#5cb3fa;">Copy the data segment initializers from flash to SRAM </span><span style="color:#abb2bf;">*</span><span style="color:#5cb3fa;">/
+</span><span style="color:#5cb3fa;">  ldr r0</span><span style="color:#abb2bf;">, </span><span style="color:#5cb3fa;">=_sdata
+</span><span style="color:#5cb3fa;">  ldr r1</span><span style="color:#abb2bf;">, </span><span style="color:#5cb3fa;">=_edata
+</span><span style="color:#5cb3fa;">  ldr r2</span><span style="color:#abb2bf;">, </span><span style="color:#5cb3fa;">=_sidata
+</span><span style="color:#5cb3fa;">  </span><span style="color:#cd74e8;">movs </span><span style="color:#5cb3fa;">r3</span><span style="color:#abb2bf;">, </span><span style="color:#5cb3fa;">#</span><span style="color:#db9d63;">0
+</span><span style="color:#5cb3fa;">  b LoopCopyDataInit
+</span><span style="color:#abb2bf;">
+</span><span style="color:#5cb3fa;">CopyDataInit:
+</span><span style="color:#5cb3fa;">  ldr r4</span><span style="color:#abb2bf;">, [</span><span style="color:#5cb3fa;">r2</span><span style="color:#abb2bf;">, </span><span style="color:#5cb3fa;">r3</span><span style="color:#abb2bf;">]
+</span><span style="color:#5cb3fa;">  </span><span style="color:#cd74e8;">str </span><span style="color:#5cb3fa;">r4</span><span style="color:#abb2bf;">, [</span><span style="color:#5cb3fa;">r0</span><span style="color:#abb2bf;">, </span><span style="color:#5cb3fa;">r3</span><span style="color:#abb2bf;">]
+</span><span style="color:#5cb3fa;">  adds r3</span><span style="color:#abb2bf;">, </span><span style="color:#5cb3fa;">r3</span><span style="color:#abb2bf;">, </span><span style="color:#5cb3fa;">#</span><span style="color:#db9d63;">4
+</span><span style="color:#abb2bf;">
+</span><span style="color:#5cb3fa;">LoopCopyDataInit:
+</span><span style="color:#5cb3fa;">  adds r4</span><span style="color:#abb2bf;">, </span><span style="color:#5cb3fa;">r0</span><span style="color:#abb2bf;">, </span><span style="color:#5cb3fa;">r3
+</span><span style="color:#5cb3fa;">  </span><span style="color:#cd74e8;">cmp </span><span style="color:#5cb3fa;">r4</span><span style="color:#abb2bf;">, </span><span style="color:#5cb3fa;">r1
+</span><span style="color:#5cb3fa;">  bcc CopyDataInit
+</span><span style="color:#5cb3fa;">#endif
+</span></code></pre>
+<p>And pass the <code>RAM_ONLY_BUILD</code> definition to the executable in CMake:</p>
+<pre data-lang="CMake" style="background-color:#2b303b;color:#6c7079;" class="language-CMake "><code class="language-CMake" data-lang="CMake"><span style="color:#5ebfcc;">target_compile_definitions</span><span style="color:#abb2bf;">(${</span><span style="color:#eb6772;">EXECUTABLE</span><span style="color:#abb2bf;">} </span><span style="color:#eb6772;">PRIVATE
+</span><span style="color:#abb2bf;">    $&lt;$&lt;</span><span style="color:#eb6772;">BOOL</span><span style="color:#abb2bf;">:${</span><span style="color:#eb6772;">RAM_ONLY_BUILD</span><span style="color:#abb2bf;">}&gt;:</span><span style="color:#eb6772;">RAM_ONLY_BUILD</span><span style="color:#abb2bf;">&gt;
+</span><span style="color:#abb2bf;">)
+</span></code></pre>
+<p>If you try building with our new option however, you might notice that the copy loop is still there:</p>
+<pre data-lang="asm" style="background-color:#2b303b;color:#6c7079;" class="language-asm "><code class="language-asm" data-lang="asm"><span style="color:#5cb3fa;">/</span><span style="color:#abb2bf;">* -- </span><span style="color:#5cb3fa;">snip </span><span style="color:#abb2bf;">-- *</span><span style="color:#5cb3fa;">/
+</span><span style="color:#5cb3fa;">  ldr r0</span><span style="color:#abb2bf;">, </span><span style="color:#5cb3fa;">=_sdata
+</span><span style="color:#db9d63;">20000238</span><span style="color:#5cb3fa;">:	480c      	ldr	r0</span><span style="color:#abb2bf;">, [</span><span style="color:#5cb3fa;">pc</span><span style="color:#abb2bf;">, </span><span style="color:#5cb3fa;">#</span><span style="color:#db9d63;">48</span><span style="color:#abb2bf;">]</span><span style="font-style:italic;color:#5f697a;">	; (2000026c &lt;LoopFillZerobss+0x12&gt;)
+</span><span style="color:#5cb3fa;">  ldr r1</span><span style="color:#abb2bf;">, </span><span style="color:#5cb3fa;">=_edata
+</span><span style="color:#5cb3fa;">2000023a:	490d      	ldr	r1</span><span style="color:#abb2bf;">, [</span><span style="color:#5cb3fa;">pc</span><span style="color:#abb2bf;">, </span><span style="color:#5cb3fa;">#</span><span style="color:#db9d63;">52</span><span style="color:#abb2bf;">]</span><span style="font-style:italic;color:#5f697a;">	; (20000270 &lt;LoopFillZerobss+0x16&gt;)
+</span><span style="color:#5cb3fa;">  ldr r2</span><span style="color:#abb2bf;">, </span><span style="color:#5cb3fa;">=_sidata
+</span><span style="color:#5cb3fa;">2000023c:	4a0d      	ldr	r2</span><span style="color:#abb2bf;">, [</span><span style="color:#5cb3fa;">pc</span><span style="color:#abb2bf;">, </span><span style="color:#5cb3fa;">#</span><span style="color:#db9d63;">52</span><span style="color:#abb2bf;">]</span><span style="font-style:italic;color:#5f697a;">	; (20000274 &lt;LoopFillZerobss+0x1a&gt;)
+</span><span style="color:#5cb3fa;">  </span><span style="color:#cd74e8;">movs </span><span style="color:#5cb3fa;">r3</span><span style="color:#abb2bf;">, </span><span style="color:#5cb3fa;">#</span><span style="color:#db9d63;">0
+</span><span style="color:#5cb3fa;">2000023e:	</span><span style="color:#db9d63;">2300      	</span><span style="color:#cd74e8;">movs	</span><span style="color:#5cb3fa;">r3</span><span style="color:#abb2bf;">, </span><span style="color:#5cb3fa;">#</span><span style="color:#db9d63;">0
+</span><span style="color:#5cb3fa;">  b LoopCopyDataInit
+</span><span style="color:#db9d63;">20000240</span><span style="color:#5cb3fa;">:	e002      	b.n	</span><span style="color:#db9d63;">20000248 </span><span style="color:#5cb3fa;">&lt;LoopCopyDataInit&gt;
+</span><span style="color:#abb2bf;">
+</span><span style="color:#db9d63;">20000242 </span><span style="color:#5cb3fa;">&lt;CopyDataInit&gt;:
+</span><span style="color:#abb2bf;">
+</span><span style="color:#5cb3fa;">CopyDataInit:
+</span><span style="color:#5cb3fa;">  ldr r4</span><span style="color:#abb2bf;">, [</span><span style="color:#5cb3fa;">r2</span><span style="color:#abb2bf;">, </span><span style="color:#5cb3fa;">r3</span><span style="color:#abb2bf;">]
+</span><span style="color:#db9d63;">20000242</span><span style="color:#5cb3fa;">:	58d4      	ldr	r4</span><span style="color:#abb2bf;">, [</span><span style="color:#5cb3fa;">r2</span><span style="color:#abb2bf;">, </span><span style="color:#5cb3fa;">r3</span><span style="color:#abb2bf;">]
+</span><span style="color:#5cb3fa;">/</span><span style="color:#abb2bf;">* -- </span><span style="color:#5cb3fa;">snip </span><span style="color:#abb2bf;">-- *</span><span style="color:#5cb3fa;">/
+</span></code></pre>
+<p>This is because by default, GCC does not preprocess assembly files with the <strong>lowercase</strong> .s extension, which the STM32CubeMX provided startup file uses.
+This goes away when we rename the file to use the <code>.S</code> extension, intended for preprocessing.
+When we do this, we can see that the loop is gone:</p>
+<pre data-lang="asm" style="background-color:#2b303b;color:#6c7079;" class="language-asm "><code class="language-asm" data-lang="asm"><span style="color:#5cb3fa;">/</span><span style="color:#abb2bf;">* -- </span><span style="color:#5cb3fa;">snip </span><span style="color:#abb2bf;">-- *</span><span style="color:#5cb3fa;">/
+</span><span style="color:#db9d63;">20000274 </span><span style="color:#5cb3fa;">&lt;Reset_Handler&gt;:
+</span><span style="color:#5cb3fa;">  </span><span style="color:#cd74e8;">cmp </span><span style="color:#5cb3fa;">r4</span><span style="color:#abb2bf;">, </span><span style="color:#5cb3fa;">r1
+</span><span style="color:#5cb3fa;">  bcc CopyDataInit
+</span><span style="color:#5cb3fa;">#endif
+</span><span style="color:#abb2bf;">
+</span><span style="color:#5cb3fa;">/</span><span style="color:#abb2bf;">* </span><span style="color:#5cb3fa;">Zero fill the bss segment. </span><span style="color:#abb2bf;">*</span><span style="color:#5cb3fa;">/
+</span><span style="color:#5cb3fa;">  ldr r2</span><span style="color:#abb2bf;">, </span><span style="color:#5cb3fa;">=_sbss
+</span><span style="color:#db9d63;">20000274</span><span style="color:#5cb3fa;">:	4a07      	ldr	r2</span><span style="color:#abb2bf;">, [</span><span style="color:#5cb3fa;">pc</span><span style="color:#abb2bf;">, </span><span style="color:#5cb3fa;">#</span><span style="color:#db9d63;">28</span><span style="color:#abb2bf;">]	</span><span style="color:#5cb3fa;">@ (</span><span style="color:#db9d63;">20000294 </span><span style="color:#5cb3fa;">&lt;LoopFillZerobss</span><span style="color:#abb2bf;">+</span><span style="color:#db9d63;">0x14</span><span style="color:#5cb3fa;">&gt;)
+</span><span style="color:#5cb3fa;">  ldr r4</span><span style="color:#abb2bf;">, </span><span style="color:#5cb3fa;">=_ebss
+</span><span style="color:#db9d63;">20000276</span><span style="color:#5cb3fa;">:	4c08      	ldr	r4</span><span style="color:#abb2bf;">, [</span><span style="color:#5cb3fa;">pc</span><span style="color:#abb2bf;">, </span><span style="color:#5cb3fa;">#</span><span style="color:#db9d63;">32</span><span style="color:#abb2bf;">]	</span><span style="color:#5cb3fa;">@ (</span><span style="color:#db9d63;">20000298 </span><span style="color:#5cb3fa;">&lt;LoopFillZerobss</span><span style="color:#abb2bf;">+</span><span style="color:#db9d63;">0x18</span><span style="color:#5cb3fa;">&gt;)
+</span><span style="color:#5cb3fa;">/</span><span style="color:#abb2bf;">* -- </span><span style="color:#5cb3fa;">snip </span><span style="color:#abb2bf;">-- *</span><span style="color:#5cb3fa;">/
+</span></code></pre>
+<p>With this, we can place the entire firmware into RAM with a debugger!</p>
+<h2 id="letting-your-imagination-run-wild">Letting your imagination run wild</h2>
+<p>At this point we've built a framework using a single, configurable linker script, with the build system being a single source of truth for both the linking and source-level configuration.</p>
+<p>From here, you can easily extend this to:</p>
+<ul>
+<li>Generate security or monitoring canaries between sections</li>
+<li>Conditionally add logging or RTTI sections</li>
+<li>Move things into tightly coupled memories conditionally</li>
+<li>Enforce MPU or DMA required alignment based on where they are used</li>
+</ul>
+<p>or go even further and split the single linker script template into multiple sources depending on the complexity of the project.</p>
+<h2 id="real-world-examples">Real-world examples</h2>
+<p>It might come as a no surprise that we're not the first ones to think of doing this - infact, several high-profile embedded projects already use linker script generation.</p>
+<ul>
+<li>
+<p>For instance, the <a href="https://github.com/zephyrproject-rtos/zephyr">Zephyr RTOS</a> also generates its linker scripts from a collection of sources.
+The memory regions are defined by the device tree, while the sections are defined in a multitude of linker script fragments, which can come from the SoC architecture, the concrete SoC that is being used and even third party software modules!
+All of this is then processed by the C preprocessor with configuration variables originating from Zephyr's KConfig configuration system.</p>
+</li>
+<li>
+<p>Another example would be the ESP-IDF SDK from Espressif, which has a <a href="https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-guides/linker-script-generation.html">deep and extensible</a> linker script generation process built with Python.
+Initial reasons for linker script generation in ESP-IDF come from external flash use - where one chip can be paired with differenly sized flash and the peculiarities of the full Harvard architecture of their Xtensa-based chips however it has grown to be an useful tool for customers too.
+It too uses KConfig and assembles the final linker script from fragments, some of which can come from user or third party code.</p>
+</li>
+<li>
+<p>Finally, one (at least for me) unexpected project which uses linker script processing is the <a href="https://github.com/torvalds/linux/blob/master/arch/x86/kernel/vmlinux.lds.S">Linux kernel</a>!
+It has a C preprocessor pass on the linker scripts and uses KConfig variables for customization.</p>
+</li>
+</ul>
+<h2 id="closing">Closing</h2>
+<p>In this blogpost we've shown how regular linker scripts can be a limitation for complex firmware projects and built a simple framework for getting around them.</p>
+<p>Hopefully, this gives you a taste of what's possible and turns linker scripts from something you just have to deal with to something that is a regular part of the software you are building, or helps you debug an issue when working with some of the industry-standard projects which use linker script generation in the future!</p>
+
+  </div>
+
+  <hr class="footer-rule" />
+
+  
+    <div class="footer-about">
+      <p>© 2026 - Djordje Nedic | Find me on <a href="https://www.linkedin.com/in/djordje-nedic/">LinkedIn</a> or <a href="https://github.com/DNedic">GitHub</a></p>
+
+    </div>
+  
+
+  <div class="related-container">
+
+    
+
+    
+
+  </div>
+
+
+    </main>
+    <footer class="footer-page">
+    
+      
+    
+    </footer>
+    <script defer src="https://dnedic.github.io/responsive-code.js"></script>
+  </body>
+</html>
