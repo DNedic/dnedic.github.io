@@ -1,0 +1,52 @@
+{# ========================= #}
+{# === table of contents === #}
+{# ========================= #}
+{%- macro toc(resource) %}
+    <toc>
+      <h2>Table of contents:</h2>
+      <ul>
+      {% for h1 in resource.toc %}
+          <li>
+              <a href="{{ h1.permalink | safe }}">{{ h1.title }}</a>
+              {% if h1.children %}
+                  <ul>
+                      {% for h2 in h1.children %}
+                          <li>
+                              <a href="{{ h2.permalink | safe }}">{{ h2.title }}</a>
+                          </li>
+                      {% endfor %}
+                  </ul>
+              {% endif %}
+          </li>
+      {% endfor %}
+      </ul>
+    </toc>
+{%- endmacro %}
+
+{# =================== #}
+{# === replace toc === #}
+{# =================== #}
+{%- macro replace_toc(resource) %}
+	{%- set content = resource.content %}
+	{%- if content is containing("[TOC]") %}
+		{%- set content = content | replace(from="<p>[TOC]</p>", to=self::toc(resource=resource)) %}
+	{%- endif -%}
+	{{ content | safe }}
+{%- endmacro %}
+
+{# === KATEX ===#}
+{% macro katex() %}
+<link rel="stylesheet" href="{{ get_url(path="vendor/katex/katex.css") }}">
+<script defer src="{{ get_url(path="vendor/katex/katex.js")}}"></script>
+<script defer src="{{ get_url(path="vendor/katex/contrib/auto-render.js") }}"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        renderMathInElement(document.body, {
+            delimiters: [
+              {left: "$$", right: "$$", display: true},
+              {left: "$", right: "$", display: false},
+            ]
+        });
+    });
+</script>
+{% endmacro katex %}

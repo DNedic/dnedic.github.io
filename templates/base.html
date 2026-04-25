@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    {% if config.extra.dark_mode %}
+      <meta name="color-scheme" content="light dark">
+    {% endif %}
+    {% if config.extra.dark_mode %}
+      <script>
+        (function () {
+          var t = localStorage.getItem("theme");
+          if (t) document.documentElement.setAttribute("data-theme", t);
+        })();
+      </script>
+    {% endif %}
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+
+   <style>
+      :root {
+        --accent-color: {{ config.extra.accent }};
+        --accent-color-2: {{ config.extra.accent2 }};
+        --accent-overlay-color: #FEFEFF;
+        --body-bg: #FEFEFF;
+        --body-color: #2E2F2F;
+        --heading-color: #2E2F2F;
+        --table-bg-even: #f3f3f3;
+        --table-border-bottom: #dddddd;
+        --subtle-bg: hsla(0, 0%, 0%, 0.04);
+        --subtle-border: rgba(0, 0, 0, 0.1);
+      }
+      {% if config.extra.dark_mode %}
+        @media (prefers-color-scheme: dark) {
+          html:not([data-theme]) {
+            --accent-color: {{ config.extra.accent_dark }};
+            --accent-color-2: {{ config.extra.accent2_dark }};
+            --body-bg: #1b1d1f;
+            --body-color: #d8dbdf;
+            --heading-color: #f0f2f5;
+            --table-bg-even: #24272b;
+            --table-border-bottom: #36393e;
+            --subtle-bg: hsla(0, 0%, 100%, 0.05);
+            --subtle-border: rgba(255, 255, 255, 0.12);
+          }
+        }
+        html[data-theme="dark"] {
+          --accent-color: {{ config.extra.accent_dark }};
+          --accent-color-2: {{ config.extra.accent2_dark }};
+          --body-bg: #1b1d1f;
+          --body-color: #d8dbdf;
+          --heading-color: #f0f2f5;
+          --table-bg-even: #24272b;
+          --table-border-bottom: #36393e;
+          --subtle-bg: hsla(0, 0%, 100%, 0.05);
+          --subtle-border: rgba(255, 255, 255, 0.12);
+        }
+      {% endif %}
+    </style>
+
+    <meta name="theme-color" content="{{ config.extra.accent }}" />
+
+    {% if config.extra.profile_small %}
+      {% set icon = resize_image(path=config.extra.profile_small, width=48, height=48, op="fill", quality=80) -%}
+      <link rel="icon" href="{{ icon.url }}" />
+      {% set icon_source = config.extra.profile_large | default(value=config.extra.profile_small) %}
+      {% for size in [48,72,96,144,192,256,384,512] -%}
+        {% set icon = resize_image(path=icon_source, width=size, height=size, op="fill", quality=80) -%}
+        <link rel="apple-touch-icon" sizes="{{size}}x{{size}}" href="{{ icon.url }}" />
+      {% endfor %}
+    {% endif %}
+
+    {% if config.extra.gtag %}
+      <script async src="https://www.googletagmanager.com/gtag/js?id={{ config.extra.gtag }}"></script>
+      <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', '{{ config.extra.gtag }}');
+      </script>
+    {% endif %}
+
+    <link rel="canonical" href="{{ current_url | default(value=config.base_url) | safe }}">
+
+    <meta name="robots" content="index, follow">
+
+    {% if config.generate_feeds %}
+      <link rel="alternate" type="application/atom+xml" title="{{ config.title }}" href="{{ get_url(path='atom.xml', trailing_slash=false) }}">
+    {% endif %}
+
+    <meta property="og:type" content="{% if page.title %}article{% else %}website{% endif %}">
+    <meta property="og:title" content="{% if page.title %}{{ page.title }}{% else %}{{ config.title }}{% endif %}">
+    <meta property="og:url" content="{% if page.path %}{{ get_url(path=page.path) }}{% else %}{{ config.base_url }}{% endif %}">
+
+    <meta name="twitter:card" content="summary">
+
+    {% if config.twitter %}
+      <meta name="twitter:creator" content="@{{ config.twitter }}">
+      <meta name="twitter:site" content="@{{ config.twitter }}">
+    {% endif %}
+
+    {% if page.extra.thumbnail %}
+      <meta property="og:image" content="{{ get_url(path=page.path ~ page.extra.thumbnail) }}">
+    {% elif page.extra.static_thumbnail %}
+      {%if page.extra.static_thumbnail is matching("^http[s]?://") %}
+        <meta property="og:image" content="{{ page.extra.static_thumbnail }}">
+      {% else %}
+        <meta property="og:image" content="{{ get_url(path=page.extra.static_thumbnail) }}">
+      {% endif %}
+    {% elif config.extra.default_og_image %}
+        <meta property="og:image" content="{{ get_url(path=config.extra.default_og_image) }}">
+    {% elif config.extra.profile_large %}
+        {% set og_img = resize_image(path=config.extra.profile_large, width=512, height=512, op="fill", quality=85) %}
+        <meta property="og:image" content="{{ og_img.url }}">
+    {% elif config.extra.profile_small %}
+        {% set og_img = resize_image(path=config.extra.profile_small, width=512, height=512, op="fill", quality=85) %}
+        <meta property="og:image" content="{{ og_img.url }}">
+    {% endif %}
+
+    {% block description %}
+      {% if page.description %}
+        <meta name="description" content="{{ page.description }}" />
+        <meta name="twitter:description" content="{{ page.description }}">
+        <meta name="og:description" content="{{ page.description }}">
+      {% else %}
+        <meta name="description" content="{{ config.description }}" />
+        <meta name="twitter:description" content="{{ config.description}}">
+        <meta name="og:description" content="{{ config.description }}">
+      {% endif %}
+    {% endblock description %}
+
+    {% if page.title %}
+      <meta name="twitter:title" content="{{ page.title }}">
+    {% else %}
+      <meta name="twitter:title" content="{{ config.title }}">
+    {% endif %}
+
+    {% set icon = resize_image(path=config.extra.profile_small, width=50, height=50, op="fill", quality=90) -%}
+    <link rel="prefetch" href="{{ icon.url }}" />
+
+    <title>
+      {% block title %}
+        {% if page.title %}
+          {{ page.title }}
+        {% else %}
+          {{ config.title }}
+        {% endif %}
+      {% endblock title %}
+    </title>
+
+    <link rel="preload" as="font" type="font/woff2" crossorigin href="{{ get_url(path="fonts/rubik-latin.woff2") | safe }}">
+    {% block head %}{% endblock head %}
+    {% block styles %}
+      <link rel="stylesheet" href="{{ get_url(path="main.css") | safe }}">
+    {% endblock styles %}
+    {% block posthead %}{% endblock posthead %}
+  </head>
+  <body>
+    {% block header %}
+      <header>
+        <a class="profile-icon" href="/">
+          <img src="{{ icon.url }}" alt="profile picture">
+        </a>
+        <nav>
+          {% for link in config.extra.nav %}
+            <a href="{{ link.path }}">{{ link.name }}</a>
+          {% endfor %}
+          {% if config.extra.dark_mode %}
+            <button class="theme-toggle" type="button" aria-label="Toggle theme">
+              <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+              <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            </button>
+          {% endif %}
+        </nav>
+      </header>
+    {% endblock header %}
+    <main>
+    {% block content %} {% endblock content %}
+    </main>
+    <footer class="footer-page">
+    {% block footer %}
+      {% if config.extra.footer_page %}
+        {{ config.extra.footer_page | markdown | safe }}
+      {% endif %}
+    {% endblock footer %}
+    </footer>
+    <script defer src="{{ get_url(path="code-enhance.js") }}"></script>
+    <script defer src="{{ get_url(path="responsive-code.js") }}"></script>
+    {% if config.extra.dark_mode %}
+      <script defer src="{{ get_url(path="theme-toggle.js") }}"></script>
+    {% endif %}
+  </body>
+</html>
