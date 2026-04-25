@@ -1,6 +1,7 @@
 # The URL the site will be built for
 base_url = "https://dnedic.github.io"
 title = "Djordje Nedic"
+description = "Embedded software blog by Djordje Nedic, covering modern approaches to firmware development."
 theme = "simple-dev-blog"
 
 taxonomies = [ { name = "tags" } ]
