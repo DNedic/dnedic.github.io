@@ -5,9 +5,7 @@
 //
 // Works with Zola's syntect output: <pre data-lang="..."><code><span>...</span></code></pre>
 
-(function () {
-  "use strict";
-
+export function initResponsiveCode() {
   // ── Tuning constants ────────────────────────────────────────────────
   const DEBOUNCE_MS          = 150;  // resize debounce delay
   const MAX_LINES            = 500;  // skip blocks longer than this
@@ -23,9 +21,10 @@
   const PAREN_OFFSET         = 1;    // continuation past opening '('
   const LD_COLON_OFFSET      = 2;    // continuation past ld ": " separator
 
-  const SKIP_LANGS        = new Set(["asm", "nasm", "gas"]);
-  const SPACE_BREAK_LANGS = new Set(["bash", "dockerfile", "nix"]);
-  const BACKSLASH_LANGS   = new Set(["bash", "dockerfile"]);
+  // Scripts keep their authored layout; command fences opt into wrapping.
+  const SKIP_LANGS        = new Set(["asm", "nasm", "gas", "bash", "sh", "shell", "zsh"]);
+  const SPACE_BREAK_LANGS = new Set(["command", "super_user", "dockerfile", "nix"]);
+  const BACKSLASH_LANGS   = new Set(["command", "super_user", "dockerfile"]);
   const OPENERS = { '(': ')', '[': ']', '{': '}' };
   const CLOSERS = { ')': '(', ']': '[', '}': '{' };
 
@@ -74,7 +73,7 @@
     ].concat(COMMON_RULES),
   };
 
-  // Break rule for space-separated argument languages (bash, dockerfile, nix).
+  // Break rule for command fences, Dockerfiles, and Nix arguments.
   // A single space acts as both the break point and the argument separator.
   const SPACE_RULES = [{ pat: " ", mode: "before", sep: true }];
 
@@ -164,6 +163,10 @@
 
   // ── Parsing ──────────────────────────────────────────────────────────
 
+  function blockLanguage(pre) {
+    return (pre.getAttribute("data-lang") || "").toLowerCase();
+  }
+
   function measureCharWidth(pre) {
     const probe = document.createElement("span");
     probe.style.cssText = "position:absolute;visibility:hidden;width:1ch;font:inherit";
@@ -174,10 +177,7 @@
     return w || 0;
   }
 
-  // Measures the pill width at format time rather than relying on a dataset
-  // written by code-enhance.js in a separate rAF. Avoids a timing race where
-  // the initial offsetWidth read happens before layout settles on mobile
-  // (pillWidth=0 → line 0 gets the full budget and sits under the pill).
+  // Measure the controls at format time so line 0 stays clear of the pill.
   function pillWidth(pre) {
     const parent = pre.parentElement;
     if (!parent) return 0;
@@ -459,7 +459,7 @@
     const codeEl = pre.querySelector("code");
     if (!codeEl) return;
 
-    const lang = (pre.getAttribute("data-lang") || "").toLowerCase();
+    const lang = blockLanguage(pre);
     if (SKIP_LANGS.has(lang)) return;
 
     const lines = extractLines(codeEl);
@@ -499,7 +499,8 @@
 
   function formatAll() {
     restoreAll();
-    const pres = document.querySelectorAll("pre[data-lang]");
+    const pres = Array.from(document.querySelectorAll("pre[data-lang]"))
+      .filter(pre => !SKIP_LANGS.has(blockLanguage(pre)));
     if (!pres.length) { if (window.__rcDebug) window.__rcDebug(0, [], "no pres"); return; }
 
     // Measure character width once (single DOM operation); all code blocks
@@ -515,8 +516,6 @@
     // all blocks on the page share the same indentation scale.
     let factor = 1;
     for (let j = 0; j < pres.length; j++) {
-      const lang0 = (pres[j].getAttribute("data-lang") || "").toLowerCase();
-      if (SKIP_LANGS.has(lang0)) continue;
       const code0 = pres[j].querySelector("code");
       if (!code0) continue;
       const lines0 = extractLines(code0);
@@ -546,18 +545,12 @@
   let timer;
   function onResize() { clearTimeout(timer); timer = setTimeout(formatAll, DEBOUNCE_MS); }
 
-  function init() {
-    if (/[?&#]debug=code\b/.test(location.search + location.hash)) {
-      const s = document.createElement("script");
-      s.src = "/code-debug.js";
-      document.head.appendChild(s);
-    }
-    document.addEventListener("codeenhance:ready", function () {
-      formatAll();
-      window.addEventListener("resize", onResize);
-    }, { once: true });
+  if (/[?&#]debug=code\b/.test(location.search + location.hash)) {
+    const s = document.createElement("script");
+    s.src = "/code-debug.js";
+    document.head.appendChild(s);
   }
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
-  else init();
-})();
+  formatAll();
+  window.addEventListener("resize", onResize);
+}

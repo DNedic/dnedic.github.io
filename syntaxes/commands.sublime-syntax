@@ -1,0 +1,71 @@
+%YAML 1.2
+---
+name: Shell command
+file_extensions: [command, super_user]
+scope: source.shell.command
+contexts:
+  main:
+    - include: comments
+    - match: '([A-Za-z_]\w*)(=)'
+      captures:
+        1: variable.other.readwrite.shell
+        2: keyword.operator.assignment.shell
+      push: assignment
+    - include: word-parts
+    - match: '[|&;<>()\[\]{}]+'
+      scope: keyword.operator.logical.shell
+    - match: '[^\s|&;<>()\[\]{}"''$\\]+'
+      scope: variable.function.shell
+      push: arguments
+  arguments:
+    - include: comments
+    - include: word-parts
+    - match: '\n'
+      pop: true
+    - match: '\|\||&&|[|;&]'
+      scope: keyword.operator.logical.shell
+      pop: true
+    - match: '(?=\))'
+      pop: true
+    - match: '[<>]+|[()\[\]{}]'
+      scope: keyword.operator.logical.shell
+    - match: '(?<!\S)--?[\w][\w-]*'
+      scope: variable.parameter.option.shell
+  assignment:
+    - include: word-parts
+    - match: '(?=[ \t\n])'
+      pop: true
+  comments:
+    - match: '(?<!\S)#.*$'
+      scope: comment.line.number-sign.shell
+  word-parts:
+    - match: "'"
+      push: single-quoted
+    - match: '"'
+      push: double-quoted
+    - include: expansion
+    - match: '\\(?:\n|.)'
+      scope: constant.character.escape.shell
+  expansion:
+    - match: '\$\('
+      scope: punctuation.section.interpolation.begin.shell
+      push: substitution
+    - match: '\$(?:\{[^}]+\}|[A-Za-z_]\w*|[0-9@*#?$!-])'
+      scope: variable.other.readwrite.shell
+  single-quoted:
+    - meta_scope: string.quoted.single.shell
+    - match: "'"
+      pop: true
+  double-quoted:
+    - meta_scope: string.quoted.double.shell
+    - match: '"'
+      pop: true
+    - include: expansion
+    - match: '\\(?:\n|.)'
+      scope: constant.character.escape.shell
+  substitution:
+    - meta_scope: meta.interpolation.shell
+    - match: '\)'
+      scope: punctuation.section.interpolation.end.shell
+      pop: true
+    - include: main

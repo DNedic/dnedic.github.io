@@ -18,6 +18,7 @@ generate_feeds = true
 # Theme can be customized by setting the `highlight_theme` variable to a theme supported by Zola
 highlight_code = true
 highlight_theme = "one-dark"
+extra_syntaxes_and_themes = ["syntaxes"]
 
 [extra]
 # Put all your custom variables here

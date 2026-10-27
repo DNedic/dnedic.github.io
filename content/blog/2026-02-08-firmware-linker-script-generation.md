@@ -190,7 +190,7 @@ SECTIONS
 ```
 and rename the linker script to `linker.ld.in` to make it clear that that it is indeed a template.
 Now we can run the preprocessor to verify that we haven't broken anything:
-```bash
+```command
 arm-none-eabi-gcc \
     -E -P -x c \
     -DRAM_ORIGIN=0x20000000 \
@@ -259,7 +259,7 @@ With this, our project builds and we can finally get to the fun part - making th
 
 Let's start simple by making the stack and heap size configurable.
 After deleting the constants we previously added, we need simply define cached values when configuring the project:
-```bash
+```command
 cmake -S . -B build -DHEAP_SIZE=0 -DMINIMUM_STACK_SIZE=0x800 -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=arm-none-eabi-gcc.cmake
 ```
 
@@ -309,7 +309,7 @@ endif()
 ```
 
 Another way to verify that our changes worked is to look at the `.map` file in our build folder:
-```ld
+```
 .isr_vector     0x08001000      0x10c
  *(.isr_vector)
  .isr_vector    0x08001000      0x10c CMakeFiles/most_commented_embedded_cmakelists.elf.dir/startup_stm32f103xb.S.obj
@@ -409,7 +409,7 @@ target_compile_definitions(${EXECUTABLE} PRIVATE
 ```
 
 If you try building with our new option however, you might notice that the copy loop is still there:
-```asm
+```
 /* -- snip -- */
   ldr r0, =_sdata
 20000238:	480c      	ldr	r0, [pc, #48]	; (2000026c <LoopFillZerobss+0x12>)
@@ -433,7 +433,7 @@ CopyDataInit:
 This is because by default, GCC does not preprocess assembly files with the **lowercase** .s extension, which the STM32CubeMX provided startup file uses.
 This goes away when we rename the file to use the `.S` extension, intended for preprocessing.
 When we do this, we can see that the loop is gone:
-```asm
+```
 /* -- snip -- */
 20000274 <Reset_Handler>:
   cmp r4, r1

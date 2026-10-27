@@ -1,12 +1,7 @@
 // Wraps each <pre data-lang> with a language label and a copy-to-clipboard
-// button. Dispatches "codeenhance:ready" on document after all pill widths
-// are measured so responsive-code.js waits for that instead of racing on
-// DOMContentLoaded. Must still load before responsive-code.js so the
-// captured source text is the original, pre-formatted version.
+// button. Run before responsive formatting to capture the authored source text.
 
-(function () {
-  "use strict";
-
+export function enhanceCodeBlocks() {
   const LABELS = {
     c: "C",
     cpp: "C++",
@@ -17,6 +12,8 @@
     sh: "Shell",
     shell: "Shell",
     zsh: "Shell",
+    command: "Shell",
+    super_user: "Root shell",
     js: "JavaScript",
     ts: "TypeScript",
     jsx: "JSX",
@@ -43,7 +40,7 @@
   };
 
   function pretty(lang) {
-    return LABELS[lang.toLowerCase()] || lang;
+    return LABELS[lang] || lang;
   }
 
   function fallbackCopy(text) {
@@ -63,7 +60,8 @@
     const code = pre.querySelector("code");
     if (!code) return;
 
-    const lang = pre.getAttribute("data-lang") || "";
+    const lang = (pre.getAttribute("data-lang") || "").toLowerCase();
+    const isCommand = lang === "command" || lang === "super_user";
     const original = code.textContent;
     const wrapper = document.createElement("div");
     wrapper.className = "code-block";
@@ -81,7 +79,7 @@
     const btn = document.createElement("button");
     btn.className = "code-copy";
     btn.type = "button";
-    btn.setAttribute("aria-label", "Copy code to clipboard");
+    btn.setAttribute("aria-label", isCommand ? "Copy command to clipboard" : "Copy code to clipboard");
     btn.textContent = "Copy";
 
     let resetTimer = 0;
@@ -115,19 +113,6 @@
     wrapper.appendChild(pre);
   }
 
-  function init() {
-    const pres = document.querySelectorAll("pre[data-lang]");
-    for (let i = 0; i < pres.length; i++) enhance(pres[i]);
-    // Signal that every pre is wrapped; responsive-code.js measures the pill
-    // widths itself at format time.
-    requestAnimationFrame(() => {
-      document.dispatchEvent(new CustomEvent("codeenhance:ready"));
-    });
-  }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
-  } else {
-    init();
-  }
-})();
+  const pres = document.querySelectorAll("pre[data-lang]");
+  for (let i = 0; i < pres.length; i++) enhance(pres[i]);
+}

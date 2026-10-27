@@ -185,8 +185,7 @@
       {% endif %}
     {% endblock footer %}
     </footer>
-    <script defer src="{{ get_url(path="code-enhance.js") }}"></script>
-    <script defer src="{{ get_url(path="responsive-code.js") }}"></script>
+    <script type="module" src="{{ get_url(path="code-blocks.js") }}"></script>
     {% if config.extra.dark_mode %}
       <script defer src="{{ get_url(path="theme-toggle.js") }}"></script>
     {% endif %}

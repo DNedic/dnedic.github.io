@@ -27,8 +27,8 @@ Additionally, if we want to have a usable development environment, we need `git`
 There are a couple of ways to manually obtain the necessary tools for building the project, let's go through some of them.
 ### The system package manager
 One thing we could do is use our system's package repositories, for instance on Arch Linux we would do:
-```bash
-sudo pacman -Syu cmake make git arm-none-eabi-gcc arm-none-eabi-binutils arm-none-eabi-newlib openocd
+```super_user
+pacman -Syu cmake make git arm-none-eabi-gcc arm-none-eabi-binutils arm-none-eabi-newlib openocd
 ```
 This is quite convenient as it only involves a single command and has ensured compatibility with our system.
 There are however quite a few hidden downsides with this approach:
@@ -70,12 +70,12 @@ WORKDIR /usr/project
 ```
 
 To build our image and give it a name, we can run:
-```bash
+```command
 docker build -t most_commented_embedded_cmakelists .
 ```
 
 And to enter an interactive shell inside the container built from our image, we can use this command:
-```bash
+```command
 docker run -v $(pwd):/usr/project -it most_commented_embedded_cmakelists
 ```
 
@@ -89,7 +89,7 @@ RUN apt-get -y install openocd libusb-1.0-0
 
 then pass all usb devices through to the container every time we run it:
 
-```bash
+```command
 docker run -v $(pwd):/usr/project -v /dev/bus/usb:/dev/bus/usb --privileged -it most_commented_embedded_cmakelists
 ```
 
@@ -133,8 +133,13 @@ in pkgs.mkShell {
 By running `nix-shell` inside our project directory, the Nix package manager will download specified packages from the Nix repositories along with their dependencies and place them in `/nix/store` and then export the executables of these packages to our shells `PATH`.
 
 We can easily check this by running `which` on one of our tools:
-```bash
+```command
 which arm-none-eabi-gcc
+```
+
+This gives us the compiler's absolute path:
+
+```
 /nix/store/im3iiikm684j0dn166k78japxlknsrki-gcc-arm-embedded-12.2.rel1/bin/arm-none-eabi-gcc
 ```
 

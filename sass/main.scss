@@ -111,6 +111,25 @@ table tbody tr:last-of-type {
     border-bottom: 2px solid var(--accent-color);
 }
 
+pre[data-lang="command"],
+pre[data-lang="super_user"] {
+  position: relative;
+  padding-left: calc(1rem + 2ch);
+
+  &::before {
+    content: "$";
+    position: absolute;
+    left: 1rem;
+    font-size: clamp(0.77em, 0.3vw + 0.6em, 0.83em);
+    color: #9acc76;
+    user-select: none;
+  }
+}
+
+pre[data-lang="super_user"]::before {
+  content: "#";
+}
+
 .code-block {
   margin: 1rem 0;
   background: #282c34;
