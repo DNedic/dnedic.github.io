@@ -5,6 +5,8 @@ body {
   color: var(--body-color);
 }
 
+
+
 .post-preview {
   h3.post-title {
     margin-bottom: 0;
@@ -17,49 +19,60 @@ body {
   margin-bottom: 2rem;
 }
 
-.post-title {
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.8rem;
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0 0;
+  font-size: 0.8em;
+  line-height: 1.8;
 
-  .tags {
-    > *:not(:last-child) {
-      margin-right: 0.25rem;
+  a {
+    display: inline-block;
+    color: var(--muted-color);
+    border-bottom-color: transparent;
+    &:hover {
+      color: var(--accent-color);
+      border-bottom-color: currentColor;
     }
   }
+}
 
-  > h1 {
-    margin-bottom: 0.4rem;
+.article-header {
+  margin-bottom: 2.5rem;
+
+  .article-back {
+    border-bottom-color: transparent;
+    &:hover { border-bottom-color: currentColor; }
   }
 
-  margin-bottom: 3rem;
+  h1 { margin: 1.5rem 0 1rem; }
 }
 
-.footer-rule {
-  margin-top: 4rem;
+.article-content {
+  img {
+    display: block;
+    margin: 1.5rem auto;
+    border: 1px solid var(--subtle-border);
+  }
+  > :last-child { margin-bottom: 0; }
 }
 
-.related-container {
+.article-navigation {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2rem;
+  padding-top: 2rem;
   margin-top: 3rem;
-  margin-bottom: 4rem;
-  display: flex;
-  text-align: center;
+  border-top: 1px solid var(--subtle-border);
 
-  > .link {
-    flex-shrink: 0;
-    padding: 1rem;
-    box-sizing: border-box;
-    width: 50%;
-  }
-}
-
-.footer-about {
-  text-align: center;
-  font-size: 1rem;
-  padding: 0 1rem;
-}
-
-img {
-  max-width: 100%;
-  margin: auto;
-  border: solid var(--subtle-bg);
+  > a { border-bottom: none; }
+  > a[rel="next"] { grid-column: 2; text-align: right; }
+  .navigation-label { display: block; color: var(--muted-color); margin-bottom: 0.5rem; }
+  .navigation-title { line-height: 1.5; }
+  a:hover .navigation-title { text-decoration: underline; text-underline-offset: 0.2em; }
 }
 
 .taxonomy-name {
@@ -73,6 +86,14 @@ img {
   > .term:not(:last-child) {
     margin-right: 1rem;
     margin-bottom: 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .article-navigation {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    > a[rel="next"] { grid-column: 1; text-align: left; }
   }
 }
 

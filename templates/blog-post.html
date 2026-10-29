@@ -65,41 +65,43 @@
 {% endblock %}
 
 {% block content %}
-  <div class="post-title">
-    <h1>{{ page.title }}</h1>
-    <small>
-      {{ page.date | date(format="%B %d, %Y") }}
+  <article aria-labelledby="article-title">
+    <header class="article-header">
+      <a class="article-back" href="{{ get_url(path='blog/') }}">&larr; All posts</a>
+      <h1 id="article-title">{{ page.title }}</h1>
+      <div class="post-meta">
+        <time datetime="{{ page.date | date(format='%Y-%m-%d') }}">{{ page.date | date(format="%B %-d, %Y") }}</time>
+        <span aria-hidden="true">&middot;</span>
+        <span>{{ page.reading_time }} min read</span>
+      </div>
       {% if page.taxonomies.tags %}
-        -
-        <span class="tags">
+        <ul class="tags" aria-label="Topics">
           {% for tag in page.taxonomies.tags %}
-            <a href="{{ get_taxonomy_url(kind="tags", name=tag) }}">{{ tag }}</a>
+            <li><a href="{{ get_taxonomy_url(kind="tags", name=tag) }}">{{ tag }}</a></li>
           {% endfor %}
-        </span>
+        </ul>
       {% endif %}
-    </small>
-  </div>
+    </header>
 
-  <div>
-    {{ macros::replace_toc(resource=page) }}
-  </div>
+    <div class="article-content">
+      {{ macros::replace_toc(resource=page) }}
+    </div>
 
-  <div class="related-container">
-
-    {% if page.earlier %}
-      <div class="link">
-        Previous <br />
-        <a href="{{ page.earlier.permalink }}">{{ page.earlier.title }}</a>
-      </div>
+    {% if page.higher or page.lower %}
+      <nav class="article-navigation" aria-label="More posts">
+        {% if page.higher %}
+          <a href="{{ page.higher.permalink }}" rel="prev">
+            <span class="navigation-label">&larr; Previous post</span>
+            <span class="navigation-title">{{ page.higher.title }}</span>
+          </a>
+        {% endif %}
+        {% if page.lower %}
+          <a href="{{ page.lower.permalink }}" rel="next">
+            <span class="navigation-label">Next post &rarr;</span>
+            <span class="navigation-title">{{ page.lower.title }}</span>
+          </a>
+        {% endif %}
+      </nav>
     {% endif %}
-
-    {% if page.later %}
-      <div class="link">
-        Next <br />
-        <a href="{{ page.later.permalink }}">{{ page.later.title }}</a>
-      </div>
-    {% endif %}
-
-  </div>
-
+  </article>
 {% endblock content %}
