@@ -8,8 +8,10 @@
     {% if config.extra.dark_mode %}
       <script>
         (function () {
-          var t = localStorage.getItem("theme");
-          if (t) document.documentElement.setAttribute("data-theme", t);
+          try {
+            var t = localStorage.getItem("theme");
+            if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+          } catch (e) {}
         })();
       </script>
     {% endif %}
@@ -30,6 +32,7 @@
         --table-border-bottom: #dddddd;
         --subtle-bg: hsla(0, 0%, 0%, 0.04);
         --subtle-border: rgba(0, 0, 0, 0.1);
+        --muted-color: #656b70;
       }
       {% if config.extra.dark_mode %}
         @media (prefers-color-scheme: dark) {
@@ -43,6 +46,7 @@
             --table-border-bottom: #36393e;
             --subtle-bg: hsla(0, 0%, 100%, 0.05);
             --subtle-border: rgba(255, 255, 255, 0.12);
+            --muted-color: #a9afb7;
           }
         }
         html[data-theme="dark"] {
@@ -55,6 +59,7 @@
           --table-border-bottom: #36393e;
           --subtle-bg: hsla(0, 0%, 100%, 0.05);
           --subtle-border: rgba(255, 255, 255, 0.12);
+          --muted-color: #a9afb7;
         }
       {% endif %}
     </style>
@@ -156,16 +161,22 @@
     {% endblock styles %}
     {% block posthead %}{% endblock posthead %}
   </head>
-  <body>
+  <body class="{% block body_class %}{% endblock body_class %}">
+    <a class="skip-link" href="#main-content">Skip to content</a>
     {% block header %}
-      <header>
-        <a class="profile-icon" href="/">
-          <img src="{{ icon.url }}" alt="profile picture">
+      <header class="site-header">
+        <a class="site-identity" href="{{ get_url(path='/') }}" aria-label="{{ config.title }} — home">
+          <img src="{{ icon.url }}" alt="" width="50" height="50">
+          <span>{{ config.title }}</span>
         </a>
-        <nav>
+        <nav class="site-nav" aria-label="Main navigation">
+          {% set active_path = current_path | default(value='/') %}
           {% for link in config.extra.nav %}
-            <a href="{{ link.path }}">{{ link.name }}</a>
+            <a href="{{ get_url(path=link.path) }}"{% if active_path is starting_with(link.path) %} aria-current="page"{% endif %}>{{ link.name }}</a>
           {% endfor %}
+          {% if config.generate_feeds %}
+            <a class="feed-link" href="{{ get_url(path='atom.xml') }}" aria-label="Subscribe via RSS">RSS</a>
+          {% endif %}
           {% if config.extra.dark_mode %}
             <button class="theme-toggle" type="button" aria-label="Toggle theme">
               <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
@@ -175,17 +186,21 @@
         </nav>
       </header>
     {% endblock header %}
-    <main>
+    <main id="main-content" tabindex="-1">
     {% block content %} {% endblock content %}
     </main>
     <footer class="footer-page">
     {% block footer %}
       {% if config.extra.footer_page %}
         {{ config.extra.footer_page | markdown | safe }}
+      {% elif config.extra.footer_about %}
+        {{ config.extra.footer_about | markdown | safe }}
       {% endif %}
     {% endblock footer %}
     </footer>
-    <script type="module" src="{{ get_url(path="code-blocks.js") }}"></script>
+    {% if page %}
+      <script type="module" src="{{ get_url(path="code-blocks.js") }}"></script>
+    {% endif %}
     {% if config.extra.dark_mode %}
       <script defer src="{{ get_url(path="theme-toggle.js") }}"></script>
     {% endif %}

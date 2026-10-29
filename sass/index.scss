@@ -105,9 +105,11 @@ body {
   flex-direction: column;
 }
 
-header {
+.site-header {
   display: none;
 }
+
+.footer-page { display: none; }
 
 @media (prefers-reduced-motion: no-preference) {
   .profile .profile-container {
@@ -130,7 +132,7 @@ header {
     justify-content: flex-end;
   }
 
-  header {
+  .site-header {
     display: flex;
     margin: 0;
   }
