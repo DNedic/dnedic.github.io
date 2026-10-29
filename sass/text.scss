@@ -75,8 +75,21 @@ h6 {
   > a.zola-anchor {
     border-bottom: none;
     color: inherit;
+    position: relative;
+
+    &::before {
+      content: "#";
+      position: absolute;
+      right: 100%;
+      padding-right: 0.3em;
+      color: inherit;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
   }
 
+  &:hover > a.zola-anchor::before,
+  > a.zola-anchor:focus-visible::before { opacity: 1; }
 }
 
 h1 {
