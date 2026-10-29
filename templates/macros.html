@@ -2,14 +2,18 @@
 {# === table of contents === #}
 {# ========================= #}
 {%- macro toc(resource) %}
-    <toc>
-      <h2>Table of contents:</h2>
-      <ul>
+  {% if resource.toc | length > 1 %}
+    <nav class="article-toc" aria-labelledby="article-toc-title">
+      <h2 id="article-toc-title">Contents</h2>
+      <ol class="toc-sections" role="list">
       {% for h1 in resource.toc %}
           <li>
-              <a href="{{ h1.permalink | safe }}">{{ h1.title }}</a>
+              <a class="toc-section-link" href="{{ h1.permalink | safe }}">
+                <span class="toc-number" aria-hidden="true">{% if loop.index < 10 %}0{% endif %}{{ loop.index }}</span>
+                <span class="toc-label">{{ h1.title }}</span>
+              </a>
               {% if h1.children %}
-                  <ul>
+                  <ul class="toc-subsections" role="list">
                       {% for h2 in h1.children %}
                           <li>
                               <a href="{{ h2.permalink | safe }}">{{ h2.title }}</a>
@@ -19,8 +23,9 @@
               {% endif %}
           </li>
       {% endfor %}
-      </ul>
-    </toc>
+      </ol>
+    </nav>
+  {% endif %}
 {%- endmacro %}
 
 {# =================== #}
@@ -28,8 +33,10 @@
 {# =================== #}
 {%- macro replace_toc(resource) %}
 	{%- set content = resource.content %}
-	{%- if content is containing("[TOC]") %}
+	{%- if content is containing("<p>[TOC]</p>") %}
 		{%- set content = content | replace(from="<p>[TOC]</p>", to=self::toc(resource=resource)) %}
+	{%- elif resource.reading_time >= 4 %}
+    {{ self::toc(resource=resource) }}
 	{%- endif -%}
 	{{ content | safe }}
 {%- endmacro %}

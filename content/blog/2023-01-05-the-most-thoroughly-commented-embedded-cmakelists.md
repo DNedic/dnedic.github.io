@@ -11,6 +11,8 @@ Inspired by [The most thoroughly commented linker script](https://blog.thea.code
 
 [Here](https://github.com/DNedic/most_commented_embedded_cmakelists/blob/main/CMakeLists.txt) is the CMakeLists file we are going to be taking a look at. It is a part of a [CMake STM32 project](https://github.com/DNedic/most_commented_embedded_cmakelists) i created as a demonstration and uses an STM32F103 MCU.
 
+[TOC]
+
 ## The minimum version
 ```cmake
 cmake_minimum_required(VERSION 3.21)
