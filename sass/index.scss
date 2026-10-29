@@ -45,33 +45,71 @@
   }
 }
 
-nav {
-  justify-content: center;
-}
-
 main {
-  max-width: 820px;
+  max-width: 880px;
   padding-top: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex: 0 0 auto;
+  gap: clamp(2rem, 5vw, 4rem);
 }
 
 .content .latest-container {
-  text-align: center;
-  font-size: 1rem;
-  margin-bottom: 2rem;
+  margin-top: 1.75rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--subtle-border);
+
+  .eyebrow { margin: 0 0 0.65rem; }
+  .latest-title {
+    border-bottom-color: transparent;
+    line-height: 1.6;
+    &:hover { border-bottom-color: currentColor; }
+  }
+  .post-meta { margin: 0.6rem 0 0; }
+}
+
+.home-intro {
+  h1 { margin: 0 0 1rem; }
+  p { margin: 0 0 1.25rem; }
+  ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+}
+
+.lower {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+
+  a { border-bottom-color: transparent; }
+  a:hover { border-bottom-color: currentColor; }
 }
 
 .profile {
-  margin-right: 48px;
   flex-shrink: 0;
   position: relative;
+  isolation: isolate;
 
   .profile-container {
     width: 280px;
     height: 373px;
     background: white;
+    clip-path: polygon(5% 3%, 96% 3%, 97% 93%, 11% 96%);
+
+    img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
   }
 
   &:after,
@@ -88,10 +126,12 @@ main {
 
   &:after {
     opacity: 0.5;
+    clip-path: polygon(3% 2%, 98% 2%, 95% 92%, 9% 92%);
   }
 
   &:before {
     opacity: 0.25;
+    clip-path: polygon(7% 0, 100% 4%, 92% 93%, 7% 90%);
   }
 }
 
@@ -128,26 +168,36 @@ body {
     justify-content: flex-start;
   }
 
-  nav {
-    justify-content: flex-end;
-  }
-
   .site-header {
     display: flex;
     margin: 0;
   }
 
-  .lower {
-    display: none;
-  }
-
   .profile {
-    display: none;
+    .profile-container {
+      width: 180px;
+      height: 240px;
+    }
   }
 
   main {
-    margin-top: 2rem;
-    max-width: 100%;
+    margin: auto;
+    padding: 3rem 0;
+    max-width: 700px;
+  }
+}
+
+@media (max-width: 600px) {
+  main {
+    align-items: flex-start;
     flex-direction: column;
+    gap: 1.75rem;
+    padding: 2.5rem 0;
+    margin: 0 auto;
+  }
+
+  .profile .profile-container {
+    width: 112px;
+    height: 149px;
   }
 }
