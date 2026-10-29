@@ -177,12 +177,14 @@ export function initResponsiveCode() {
     return w || 0;
   }
 
-  // Measure the controls at format time so line 0 stays clear of the pill.
+  // Only reserve first-line space when the controls overlay the code.
   function pillWidth(pre) {
     const parent = pre.parentElement;
     if (!parent) return 0;
     const controls = parent.querySelector(".code-controls");
-    return controls ? controls.offsetWidth : 0;
+    return controls && getComputedStyle(controls).position === "absolute"
+      ? controls.offsetWidth
+      : 0;
   }
 
   // Line 0 cols: reserves space for the controls pill so line 0 text stays
