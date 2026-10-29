@@ -1,8 +1,10 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1>404</h1>
+<p class="eyebrow">404 · Page not found</p>
+<h1>This page seems to be missing.</h1>
 {% if config.extra.not_found_message %}
   {{ config.extra.not_found_message | markdown | safe }}
 {% endif %}
+<p>You can head <a href="{{ get_url(path='/') }}">home</a> or explore <a href="{{ get_url(path='/blog/') }}">the blog</a>.</p>
 {% endblock content %}
