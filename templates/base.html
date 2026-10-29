@@ -86,7 +86,31 @@
       </script>
     {% endif %}
 
-    <link rel="canonical" href="{{ current_url | default(value=config.base_url) | safe }}">
+    {% set meta_url = current_url | default(value=config.base_url) %}
+    {% set meta_title = config.title %}
+    {% if page.title %}
+      {% set meta_title = page.title %}
+    {% elif section.title %}
+      {% set meta_title = section.title %}
+    {% elif term.name %}
+      {% set meta_title = term.name ~ " | " ~ config.title %}
+    {% elif taxonomy.name %}
+      {% set meta_title = taxonomy.name | title %}
+      {% set meta_title = meta_title ~ " | " ~ config.title %}
+    {% endif %}
+
+    {% set meta_description = config.description | escape %}
+    {% if page.description %}
+      {% set meta_description = page.description | escape %}
+    {% elif page.content %}
+      {# Rendered excerpts already contain HTML entities; escape literal quotes for the attribute. #}
+      {% set excerpt = page.summary | default(value=page.content) %}
+      {% set meta_description = excerpt | striptags | replace(from="[TOC]", to="") | regex_replace(pattern="[[:space:]]+", rep=" ") | trim | truncate(length=180) | regex_replace(pattern="[[:space:]]+[^[:space:]]*…$", rep="…") | replace(from='"', to="&quot;") %}
+    {% elif section.description %}
+      {% set meta_description = section.description | escape %}
+    {% endif %}
+
+    <link rel="canonical" href="{{ meta_url }}">
 
     <meta name="robots" content="index, follow">
 
@@ -95,8 +119,9 @@
     {% endif %}
 
     <meta property="og:type" content="{% if page.title %}article{% else %}website{% endif %}">
-    <meta property="og:title" content="{% if page.title %}{{ page.title }}{% else %}{{ config.title }}{% endif %}">
-    <meta property="og:url" content="{% if page.path %}{{ get_url(path=page.path) }}{% else %}{{ config.base_url }}{% endif %}">
+    <meta property="og:title" content="{{ meta_title }}">
+    <meta property="og:url" content="{{ meta_url }}">
+    <meta property="og:site_name" content="{{ config.title }}">
 
     <meta name="twitter:card" content="summary">
 
@@ -124,33 +149,19 @@
     {% endif %}
 
     {% block description %}
-      {% if page.description %}
-        <meta name="description" content="{{ page.description }}" />
-        <meta name="twitter:description" content="{{ page.description }}">
-        <meta name="og:description" content="{{ page.description }}">
-      {% else %}
-        <meta name="description" content="{{ config.description }}" />
-        <meta name="twitter:description" content="{{ config.description}}">
-        <meta name="og:description" content="{{ config.description }}">
-      {% endif %}
+      <meta name="description" content="{{ meta_description | safe }}">
+      <meta name="twitter:description" content="{{ meta_description | safe }}">
+      <meta property="og:description" content="{{ meta_description | safe }}">
     {% endblock description %}
 
-    {% if page.title %}
-      <meta name="twitter:title" content="{{ page.title }}">
-    {% else %}
-      <meta name="twitter:title" content="{{ config.title }}">
-    {% endif %}
+    <meta name="twitter:title" content="{{ meta_title }}">
 
     {% set icon = resize_image(path=config.extra.profile_small, width=50, height=50, op="fill", quality=90) -%}
     <link rel="prefetch" href="{{ icon.url }}" />
 
     <title>
       {% block title %}
-        {% if page.title %}
-          {{ page.title }}
-        {% else %}
-          {{ config.title }}
-        {% endif %}
+        {{ meta_title }}
       {% endblock title %}
     </title>
 
