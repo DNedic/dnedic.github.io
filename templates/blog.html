@@ -3,9 +3,13 @@
 {% import "post-preview.html" as post_macros %}
 
 {% block content %}
-  {{ section.content | safe }}
+  <div class="section-heading">
+    {{ section.content | replace(from="<h2", to="<h1") | replace(from="</h2>", to="</h1>") | safe }}
+  </div>
 
-  {% for post in section.pages %}
-    {{ post_macros::post_preview(post=post) }}
-  {% endfor %}
+  <div class="post-list">
+    {% for post in section.pages %}
+      {{ post_macros::post_preview(post=post) }}
+    {% endfor %}
+  </div>
 {% endblock content %}
