@@ -96,18 +96,25 @@ body {
   a:hover .navigation-title { text-decoration: underline; text-underline-offset: 0.2em; }
 }
 
-.taxonomy-name {
-  text-transform: capitalize;
-}
-
 .taxonomy-container {
   display: flex;
   flex-wrap: wrap;
+  gap: 0.8rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
 
-  > .term:not(:last-child) {
-    margin-right: 1rem;
-    margin-bottom: 0.5rem;
+  a {
+    display: inline-flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.6rem 1rem;
+    border: 1px solid var(--subtle-border);
+    border-radius: 3px;
+    &:hover { border-color: var(--accent-color); background: var(--subtle-bg); }
   }
+
+  .topic-count { color: var(--muted-color); }
 }
 
 @media (max-width: 480px) {

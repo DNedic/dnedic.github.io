@@ -1,12 +1,15 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <h1 class="taxonomy-name">{{ taxonomy.name }}</h1>
-  <div class="taxonomy-container">
-    {% for term in terms %}
-      <div class="term">
-       <a href="{{ term.permalink }}">{{ term.name }} ({{ term.pages | length }})</a>
-      </div>
-    {% endfor %}
+  <div class="section-heading">
+    <h1>Browse by topic</h1>
+    <a href="{{ get_url(path='/blog/') }}">All posts <span aria-hidden="true">→</span></a>
   </div>
+  <ul class="taxonomy-container" aria-label="Blog topics">
+    {% for term in terms %}
+      <li class="term">
+       <a href="{{ term.permalink }}">{{ term.name }} <span class="topic-count">{{ term.pages | length }} <span class="visually-hidden">{% if term.pages | length == 1 %}post{% else %}posts{% endif %}</span></span></a>
+      </li>
+    {% endfor %}
+  </ul>
 {% endblock content %}
