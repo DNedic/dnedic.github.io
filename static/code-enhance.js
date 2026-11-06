@@ -1,5 +1,5 @@
 // Wraps each <pre data-lang> with a language label and a copy-to-clipboard
-// button. Run before responsive formatting to capture the authored source text.
+// button. Capture copyable source after diff decoration, before responsive formatting.
 
 export function enhanceCodeBlocks() {
   const LABELS = {
@@ -62,7 +62,10 @@ export function enhanceCodeBlocks() {
 
     const lang = (pre.getAttribute("data-lang") || "").toLowerCase();
     const isCommand = lang === "command" || lang === "super_user";
-    const original = code.textContent;
+    const isDiff = pre.hasAttribute("data-diff");
+    const copyText = isDiff
+      ? Array.from(code.querySelectorAll(":scope > .code-diff-line:not(.is-removed)"), line => line.textContent).join("")
+      : code.textContent;
     const wrapper = document.createElement("div");
     wrapper.className = "code-block";
 
@@ -79,7 +82,8 @@ export function enhanceCodeBlocks() {
     const btn = document.createElement("button");
     btn.className = "code-copy";
     btn.type = "button";
-    btn.setAttribute("aria-label", isCommand ? "Copy command to clipboard" : "Copy code to clipboard");
+    btn.setAttribute("aria-label", isCommand ? "Copy command to clipboard" :
+      isDiff ? "Copy updated code to clipboard" : "Copy code to clipboard");
     btn.textContent = "Copy";
 
     let resetTimer = 0;
@@ -97,12 +101,12 @@ export function enhanceCodeBlocks() {
 
     btn.addEventListener("click", () => {
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(original).then(
+        navigator.clipboard.writeText(copyText).then(
           () => { flash(true); },
-          () => { flash(fallbackCopy(original)); }
+          () => { flash(fallbackCopy(copyText)); }
         );
       } else {
-        flash(fallbackCopy(original));
+        flash(fallbackCopy(copyText));
       }
     });
 

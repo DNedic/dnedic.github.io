@@ -85,7 +85,7 @@ body {
     margin-block: var(--space-lg) var(--space-xs);
   }
 
-  > :is(h1, h2, h3, h4, h5, h6) + :is(p, ul, ol, pre, .code-block, blockquote) {
+  > :is(h1, h2, h3, h4, h5, h6) + :is(p, ul, ol, pre, .code-block, .code-diff, blockquote) {
     margin-top: 0;
   }
 
@@ -288,6 +288,64 @@ pre[data-lang="super_user"]::before {
       background: var(--accent-color-2);
       border-color: var(--accent-color-2);
       color: #ffffff;
+    }
+  }
+}
+
+.code-diff {
+  margin: var(--space-md) 0;
+
+  > .code-block {
+    margin: 0;
+  }
+
+  pre[data-diff] {
+    padding: 1rem 0;
+
+    // Diffs scroll without reflowing, so reserve room for the shared desktop pill.
+    @media (min-width: 769px) {
+      padding-top: 2.5rem;
+    }
+
+    // The gutter belongs to the diff; shell prompts would overlap it.
+    &::before { content: none; }
+
+    > code {
+      display: block;
+      width: max-content;
+      min-width: 100%;
+    }
+  }
+
+  .code-diff-line {
+    display: block;
+    position: relative;
+    box-sizing: border-box;
+    min-height: 1lh;
+    padding: 0 1rem 0 calc(1rem + 2ch);
+
+    &::before {
+      position: absolute;
+      left: 1rem;
+      user-select: none;
+    }
+
+    &.is-added {
+      background: rgba(84, 174, 102, 0.16);
+
+      &::before {
+        content: "+";
+        color: #9acc76;
+      }
+    }
+
+    &.is-removed {
+      background: rgba(224, 92, 102, 0.16);
+
+      &::before {
+        content: "−";
+        color: #ef858d;
+      }
     }
   }
 }

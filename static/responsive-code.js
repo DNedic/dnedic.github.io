@@ -21,7 +21,7 @@ export function initResponsiveCode() {
   const PAREN_OFFSET         = 1;    // continuation past opening '('
   const LD_COLON_OFFSET      = 2;    // continuation past ld ": " separator
 
-  // Scripts keep their authored layout; command fences opt into wrapping.
+  // Scripts and diffs keep their authored layout; command fences opt into wrapping.
   const SKIP_LANGS        = new Set(["asm", "nasm", "gas", "bash", "sh", "shell", "zsh"]);
   const SPACE_BREAK_LANGS = new Set(["command", "super_user", "dockerfile", "nix"]);
   const BACKSLASH_LANGS   = new Set(["command", "super_user", "dockerfile"]);
@@ -502,7 +502,7 @@ export function initResponsiveCode() {
   function formatAll() {
     restoreAll();
     const pres = Array.from(document.querySelectorAll("pre[data-lang]"))
-      .filter(pre => !SKIP_LANGS.has(blockLanguage(pre)));
+      .filter(pre => !pre.hasAttribute("data-diff") && !SKIP_LANGS.has(blockLanguage(pre)));
     if (!pres.length) { if (window.__rcDebug) window.__rcDebug(0, [], "no pres"); return; }
 
     // Measure character width once (single DOM operation); all code blocks

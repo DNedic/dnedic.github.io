@@ -1,0 +1,32 @@
+{%- if language is not defined -%}
+<div class="code-diff" data-added="{{ added | default(value="") }}" data-removed="{{ removed | default(value="") }}">
+{{ body | trim | markdown | safe }}
+</div>
+{%- else -%}
+{%- set newline = "
+" -%}
+{%- set source = body | regex_replace(pattern=`\A(?:\r?\n)+|(?:\r?\n)+\z`, rep="") -%}
+{%- set_global lines = [] -%}
+{%- set_global added_lines = [] -%}
+{%- set_global removed_lines = [] -%}
+{%- for line in source | split(pat=newline) -%}
+  {%- if line is starting_with("+") -%}
+    {%- set_global added_lines = added_lines | concat(with=[loop.index]) -%}
+    {%- set clean = line | regex_replace(pattern=`^[+]`, rep="") -%}
+  {%- elif line is starting_with("-") -%}
+    {%- set_global removed_lines = removed_lines | concat(with=[loop.index]) -%}
+    {%- set clean = line | regex_replace(pattern=`^-`, rep="") -%}
+  {%- else -%}
+    {%- set clean = line | regex_replace(pattern=`^\\([+\-\\]|\s)`, rep="$1") -%}
+  {%- endif -%}
+  {%- set_global lines = lines | concat(with=[clean]) -%}
+{%- endfor -%}
+{%- set source = lines | join(sep=newline) -%}
+{%- set backticks = source | regex_replace(pattern="[^`]", rep="") -%}
+{%- set fence = "```" ~ backticks -%}
+{%- set language = language | default(value="txt") -%}
+{%- set markdown = fence ~ language ~ newline ~ source ~ newline ~ fence -%}
+<div class="code-diff" data-added="{{ added_lines | join(sep=" ") }}" data-removed="{{ removed_lines | join(sep=" ") }}">
+{{ markdown | markdown | safe }}
+</div>
+{%- endif -%}

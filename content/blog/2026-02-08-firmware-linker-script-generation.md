@@ -163,12 +163,14 @@ In our case however, we'll be using the C preprocessor!
 It lives inside your toolchain, can substitute placeholders and conditionally include or not whole sections of text.
 
 Our first step is to factor out constants like the stack and heap size so that we can configure them dynamically:
-```ld
+{% diff(language="ld") %}
 /* --snip-- */
 MEMORY
 {
-    RAM (xrw)  : ORIGIN = RAM_ORIGIN, LENGTH = RAM_LENGTH
-    FLASH (rx) : ORIGIN = FLASH_ORIGIN, LENGTH = FLASH_LENGTH
+-    RAM (xrw)  : ORIGIN = 0x20000000, LENGTH = 20K
++    RAM (xrw)  : ORIGIN = RAM_ORIGIN, LENGTH = RAM_LENGTH
+-    FLASH (rx) : ORIGIN = 0x8000000, LENGTH = 64K
++    FLASH (rx) : ORIGIN = FLASH_ORIGIN, LENGTH = FLASH_LENGTH
 }
 
 SECTIONS
@@ -178,16 +180,18 @@ SECTIONS
     {
         PROVIDE ( end = . );
         PROVIDE ( _end = . );
-        . = . + HEAP_SIZE;
+-        . = . + 0x200;
++        . = . + HEAP_SIZE;
     } > RAM
 
     .stack (NOLOAD) : ALIGN(8)
     {
-        . = . + MINIMUM_STACK_SIZE;
+-        . = . + 0x400;
++        . = . + MINIMUM_STACK_SIZE;
     } > RAM
    /* --snip-- */
 }
-```
+{% end %}
 and rename the linker script to `linker.ld.in` to make it clear that that it is indeed a template.
 Now we can run the preprocessor to verify that we haven't broken anything:
 ```command
@@ -323,26 +327,17 @@ In some situations, you might want to upload the entire firmware into RAM.
 What you get this way is much faster firmware uploads, don't add wear to the flash and in some cases avoid the flash application image format requirements when bringing up new chips.
 
 To get a RAM-only firmware image, we have to replace the output section to region placement everywhere `FLASH` is used.
-For example, `.data` normally resides in RAM but is initialized from FLASH:
-```ld
+For example, `.data` normally resides in RAM but is initialized from FLASH. For a RAM-only build, we change its mapping:
+{% diff(language="ld") %}
 .data : ALIGN(4)
 {
     _sdata = .;
     *(.data)
     *(.data*)
     _edata = ALIGN(4);
-} > RAM AT > FLASH
-```
-For a RAM-only build, we change it to:
-```ld
-.data : ALIGN(4)
-{
-    _sdata = .;
-    *(.data)
-    *(.data*)
-    _edata = ALIGN(4);
-} > RAM
-```
+-} > RAM AT > FLASH
++} > RAM
+{% end %}
 
 Since we're using the C preprocessor, we can just `#ifdef` the mapping:
 ```ld
@@ -365,24 +360,24 @@ option(RAM_ONLY_BUILD "If set, the entire firmware is placed in RAM")
 ```
 
 and then conditionally define it for the linker script preprocessing using the `BOOL` generator expression:
-```CMake
+{% diff(language="cmake") %}
 add_custom_command(
     OUTPUT ${CMAKE_BINARY_DIR}/linker.ld
     COMMAND ${CMAKE_C_COMPILER}
             -E -P -x c
             # -- snip --
-            $<$<BOOL:${RAM_ONLY_BUILD}>:-DRAM_ONLY_BUILD>
++            $<$<BOOL:${RAM_ONLY_BUILD}>:-DRAM_ONLY_BUILD>
             ${CMAKE_SOURCE_DIR}/linker.ld.in
             > ${CMAKE_BINARY_DIR}/linker.ld
     DEPENDS ${CMAKE_SOURCE_DIR}/linker.ld.in
     COMMENT "Generating the linker script"
 )
-```
+{% end %}
 > **Note:** If you haven't used [generator expressions](https://cmake.org/cmake/help/latest/manual/cmake-generator-expressions.7.html) previously, what this essentially means is: if the boolean representation of the `RAM_ONLY_BUILD` value is true, add the text after `>:`, otherwise not.
 
 Also, since non-zero initialized variables are normally copied from FLASH to RAM, we should also disable this behavior in the startup script:
-```asm
-#ifndef RAM_ONLY_BUILD
+{% diff(language="asm") %}
++#ifndef RAM_ONLY_BUILD
 /* Copy the data segment initializers from flash to SRAM */
   ldr r0, =_sdata
   ldr r1, =_edata
@@ -399,8 +394,8 @@ LoopCopyDataInit:
   adds r4, r0, r3
   cmp r4, r1
   bcc CopyDataInit
-#endif
-```
++#endif
+{% end %}
 And pass the `RAM_ONLY_BUILD` definition to the executable in CMake:
 ```CMake
 target_compile_definitions(${EXECUTABLE} PRIVATE
