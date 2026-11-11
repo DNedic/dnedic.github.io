@@ -302,11 +302,6 @@ pre[data-lang="super_user"]::before {
   pre[data-diff] {
     padding: 1rem 0;
 
-    // Diffs scroll without reflowing, so reserve room for the shared desktop pill.
-    @media (min-width: 769px) {
-      padding-top: 2.5rem;
-    }
-
     // The gutter belongs to the diff; shell prompts would overlap it.
     &::before { content: none; }
 
